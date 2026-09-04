@@ -1,15 +1,18 @@
 {
   "expo": {
-    "name": "app-treino",
+    "name": "DALLAS",
     "slug": "app-treino",
+    "scheme": "dallas",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fittreino.dallas"
     },
     "android": {
+      "package": "com.fittreino.dallas",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

@@ -1,20 +1,60 @@
+import 'react-native-gesture-handler';
+import 'react-native-get-random-values';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import RootNavigator from './src/navigation/RootNavigator';
+import LoginScreen from './src/screens/LoginScreen';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { LoadingState } from './src/components/common';
+import Screen from './src/components/common/Screen';
+import { colors } from './src/theme';
+import { refreshApiStatus } from './src/api';
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+const theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: colors.background,
+    card: colors.surface,
+    text: colors.text,
+    border: colors.border,
+    primary: colors.primary,
+  },
+};
+
+function Root() {
+  const { authed, checking } = useAuth();
+
+  if (checking) {
+    return (
+      <Screen>
+        <LoadingState />
+      </Screen>
+    );
+  }
+
+  if (!authed) {
+    return <LoginScreen />;
+  }
+
+  return <RootNavigator />;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default function App() {
+  useEffect(() => {
+    refreshApiStatus();
+  }, []);
+
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NavigationContainer theme={theme}>
+          <StatusBar style="light" />
+          <Root />
+        </NavigationContainer>
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+}
