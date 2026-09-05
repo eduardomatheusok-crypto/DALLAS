@@ -6,6 +6,9 @@ export type RootStackParamList = {
   ExerciseExecution: { workoutId: string };
   LogDetail: { logId: string };
   ExerciseProgress: { exerciseId: string; name: string };
+  GroupDetail: { groupId: string };
+  GroupForm: undefined;
+  CompetitionForm: { groupId: string };
 };
 
 export type MainTabParamList = {

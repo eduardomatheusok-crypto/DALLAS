@@ -50,3 +50,7 @@ export {
   isCompositeTechnique,
   exBlocksFor,
 } from './AdvancedTechnique';
+
+export type { GroupSummary, Group, Member } from './Group';
+export type { Competition, CompetitionStatus, RankingEntry, RankingStats } from './Competition';
+export type { ChatMessage } from './ChatMessage';

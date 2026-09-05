@@ -7,6 +7,9 @@ import WorkoutExerciseConfigScreen from '../screens/WorkoutExerciseConfigScreen'
 import ExerciseExecutionScreen from '../screens/ExerciseExecutionScreen';
 import LogDetailScreen from '../screens/LogDetailScreen';
 import ExerciseProgressScreen from '../screens/ExerciseProgressScreen';
+import GroupDetailScreen from '../screens/GroupDetailScreen';
+import GroupFormScreen from '../screens/GroupFormScreen';
+import CompetitionFormScreen from '../screens/CompetitionFormScreen';
 import { colors } from '../theme';
 import type { RootStackParamList } from './types';
 
@@ -57,6 +60,21 @@ export default function RootNavigator() {
         name="ExerciseProgress"
         component={ExerciseProgressScreen}
         options={{ title: '' }}
+      />
+      <Stack.Screen
+        name="GroupDetail"
+        component={GroupDetailScreen}
+        options={{ title: '', headerBackTitle: 'Voltar' }}
+      />
+      <Stack.Screen
+        name="GroupForm"
+        component={GroupFormScreen}
+        options={{ title: '', headerBackTitle: 'Voltar' }}
+      />
+      <Stack.Screen
+        name="CompetitionForm"
+        component={CompetitionFormScreen}
+        options={{ title: '', headerBackTitle: 'Voltar' }}
       />
     </Stack.Navigator>
   );

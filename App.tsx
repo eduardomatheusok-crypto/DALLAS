@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import 'react-native-get-random-values';
 import React, { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -45,6 +46,10 @@ function Root() {
 export default function App() {
   useEffect(() => {
     refreshApiStatus();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshApiStatus(true);
+    });
+    return () => sub.remove();
   }, []);
 
   return (

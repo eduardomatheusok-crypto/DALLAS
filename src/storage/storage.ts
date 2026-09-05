@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { User, Exercise, Workout, WorkoutLog } from '../models';
+import type { User, Exercise, Workout, WorkoutLog, GroupSummary } from '../models';
 
 const KEYS = {
   user: '@treino/user',
@@ -8,6 +8,7 @@ const KEYS = {
   exercises: '@treino/exercises',
   workouts: '@treino/workouts',
   logs: '@treino/logs',
+  groups: '@treino/groups',
 } as const;
 
 async function read<T>(key: string, fallback: T): Promise<T> {
@@ -65,6 +66,12 @@ export const storage = {
   },
   async setLogs(logs: WorkoutLog[]): Promise<void> {
     return write(KEYS.logs, logs);
+  },
+  async getGroups(): Promise<GroupSummary[]> {
+    return read<GroupSummary[]>(KEYS.groups, []);
+  },
+  async setGroups(groups: GroupSummary[]): Promise<void> {
+    return write(KEYS.groups, groups);
   },
   async clear(): Promise<void> {
     await AsyncStorage.clear();

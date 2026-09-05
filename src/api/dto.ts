@@ -253,3 +253,155 @@ const VALID_SET_CATEGORIES = new Set<string>(['warmup', 'preparation', 'working'
 function normalizeSetCategory(value: string | undefined): SetCategory | undefined {
   return value && VALID_SET_CATEGORIES.has(value) ? (value as SetCategory) : undefined;
 }
+
+// ----- Grupos / Competições / Chat -----
+
+export interface MemberDto {
+  user: UserDto;
+  role: string;
+  joinedAt: string;
+}
+
+export interface GroupSummaryDto {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  memberCount: number;
+  ownerId: string;
+  createdAt: string;
+}
+
+export interface GroupDto {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  inviteCode: string;
+  ownerId: string;
+  joined: boolean;
+  myRole: string;
+  memberCount: number;
+  members: MemberDto[];
+  createdAt: string;
+}
+
+export interface CompetitionDto {
+  id: string;
+  groupId: string;
+  name: string;
+  description?: string;
+  status: 'PENDING' | 'ACTIVE' | 'FINISHED';
+  startsAt: string;
+  endsAt: string;
+  awardedPositions: number;
+  participantCount: number;
+  joined: boolean;
+  ownerId: string;
+  createdAt: string;
+}
+
+export interface RankingStatsDto {
+  progressPct: number;
+  trainedDays: number;
+  totalVolume: number;
+  prCount: number;
+}
+
+export interface RankingEntryDto {
+  user: UserDto;
+  position: number;
+  totalScore: number;
+  progressionScore: number;
+  consistencyScore: number;
+  volumeScore: number;
+  goalsScore: number;
+  stats: RankingStatsDto;
+}
+
+export interface ChatMessageDto {
+  id: string;
+  userId?: string;
+  authorName: string;
+  text: string;
+  isSystem: boolean;
+  sentAt: string;
+}
+
+function userFromDto(d: UserDto): import('../models').User {
+  return { id: d.id, username: d.username, name: d.name, createdAt: d.createdAt };
+}
+
+export function groupSummaryFromDto(d: GroupSummaryDto): import('../models').GroupSummary {
+  return {
+    id: d.id,
+    name: d.name,
+    description: d.description,
+    icon: d.icon,
+    memberCount: d.memberCount,
+    ownerId: d.ownerId,
+    createdAt: d.createdAt,
+  };
+}
+
+export function groupFromDto(d: GroupDto): import('../models').Group {
+  return {
+    id: d.id,
+    name: d.name,
+    description: d.description,
+    icon: d.icon,
+    inviteCode: d.inviteCode,
+    ownerId: d.ownerId,
+    joined: d.joined,
+    myRole: d.myRole,
+    memberCount: d.memberCount,
+    members: d.members.map((m) => ({ user: userFromDto(m.user), role: m.role, joinedAt: m.joinedAt })),
+    createdAt: d.createdAt,
+  };
+}
+
+export function competitionFromDto(d: CompetitionDto): import('../models').Competition {
+  return {
+    id: d.id,
+    groupId: d.groupId,
+    name: d.name,
+    description: d.description,
+    status: d.status,
+    startsAt: d.startsAt,
+    endsAt: d.endsAt,
+    awardedPositions: d.awardedPositions,
+    participantCount: d.participantCount,
+    joined: d.joined,
+    ownerId: d.ownerId,
+    createdAt: d.createdAt,
+  };
+}
+
+export function rankingEntryFromDto(d: RankingEntryDto): import('../models').RankingEntry {
+  return {
+    user: userFromDto(d.user),
+    position: d.position,
+    totalScore: d.totalScore,
+    progressionScore: d.progressionScore,
+    consistencyScore: d.consistencyScore,
+    volumeScore: d.volumeScore,
+    goalsScore: d.goalsScore,
+    stats: {
+      progressPct: d.stats.progressPct,
+      trainedDays: d.stats.trainedDays,
+      totalVolume: d.stats.totalVolume,
+      prCount: d.stats.prCount,
+    },
+  };
+}
+
+export function messageFromDto(d: ChatMessageDto): import('../models').ChatMessage {
+  return {
+    id: d.id,
+    userId: d.userId,
+    authorName: d.authorName,
+    text: d.text,
+    isSystem: d.isSystem,
+    sentAt: d.sentAt,
+  };
+}

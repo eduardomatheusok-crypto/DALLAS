@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { storage } from '../storage';
+import { userService } from '../services';
 import type { User } from '../models';
 
 interface AuthContextValue {
@@ -43,10 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = async () => {
-    const { userService } = await import('../services');
-    await userService.logout();
-    setAuthed(false);
-    setUser(null);
+    try {
+      await userService.logout();
+    } catch {
+      // garante que o logout local nunca fique preso a falhas de rede/backend
+    } finally {
+      setAuthed(false);
+      setUser(null);
+    }
   };
 
   const value = useMemo(

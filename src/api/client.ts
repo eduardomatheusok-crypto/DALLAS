@@ -9,6 +9,16 @@ export function isApiOnline(): boolean {
   return apiOnline;
 }
 
+/**
+ * Garante que o status "online" esteja atualizado antes de qualquer decisão de
+ * bloqueio. Se o flag antigo estiver desligado (ex.: backend subiu depois do
+ * boot do app), refaz o ping uma única vez.
+ */
+export async function ensureApiOnline(): Promise<boolean> {
+  if (apiOnline) return true;
+  return refreshApiStatus(true);
+}
+
 export function onApiStatusChange(cb: (online: boolean) => void): () => void {
   listeners.add(cb);
   if (checking) cb(apiOnline);
@@ -65,12 +75,18 @@ async function request<T>(
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
-    const res = await fetch(`${API_BASE_URL}${path}`, {
-      method: options.method ?? 'GET',
-      headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-      signal: controller.signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}${path}`, {
+        method: options.method ?? 'GET',
+        headers,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal,
+      });
+    } catch {
+      setOnline(false);
+      throw new Error('Conecte-se à internet e tente novamente.');
+    }
     if (!res.ok) {
       let message = `API error ${res.status}: ${path}`;
       try {

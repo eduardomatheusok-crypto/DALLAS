@@ -186,9 +186,13 @@ export default function ExerciseExecutionScreen() {
         if (e.exerciseId !== exerciseId) return e;
         return {
           ...e,
-          sets: e.sets.map((s) =>
-            s.id === setId ? { ...s, weight: Math.max(0, Math.round((s.weight + delta) * 10) / 10) } : s,
-          ),
+          sets: e.sets.map((s) => {
+              if (s.id !== setId) return s;
+              const weight = Math.max(0, Math.round((s.weight + delta) * 10) / 10);
+              const next = { ...s, weight };
+              next.completed = next.weight > 0 && next.reps > 0;
+              return next;
+            }),
         };
       }),
     );
@@ -208,7 +212,7 @@ export default function ExerciseExecutionScreen() {
               id: `new-${Date.now()}`,
               setNumber: last ? last.setNumber + 1 : 1,
               weight: last ? last.weight : 0,
-              reps: e.plannedReps,
+              reps: 0,
               completed: false,
               type: last?.type ?? 'normal',
               category: last?.category ?? 'working',
@@ -250,7 +254,7 @@ export default function ExerciseExecutionScreen() {
           id: `initial-${Date.now()}-${i}`,
           setNumber: i + 1,
           weight: 0,
-          reps: 10,
+          reps: 0,
           completed: false,
           type: 'normal',
           category: 'working',
@@ -435,7 +439,7 @@ function buildSession(
       id: `p-${i}`,
       setNumber: i + 1,
       weight: 0,
-      reps: we.plannedReps,
+      reps: 0,
       completed: false,
       type: seg.type,
       category: seg.category,
@@ -621,7 +625,6 @@ function WorkoutExerciseBlock({
                   <Pressable
                     style={({ pressed }) => [styles.step, pressed && styles.stepPressed]}
                     onPress={() => onBumpWeight(exercise.exerciseId, set.id, -WEIGHT_STEP)}
-                    disabled={set.completed}
                     hitSlop={6}
                   >
                     <Icon name="remove" size="sm" color={colors.textSecondary} />
@@ -636,12 +639,10 @@ function WorkoutExerciseBlock({
                       const v = parseInt(t, 10);
                       onUpdateSet(exercise.exerciseId, set.id, 'weight', isNaN(v) ? 0 : v);
                     }}
-                    editable={!set.completed}
                   />
                   <Pressable
                     style={({ pressed }) => [styles.step, pressed && styles.stepPressed]}
                     onPress={() => onBumpWeight(exercise.exerciseId, set.id, WEIGHT_STEP)}
-                    disabled={set.completed}
                     hitSlop={6}
                   >
                     <Icon name="add" size="sm" color={colors.textSecondary} />
@@ -652,14 +653,16 @@ function WorkoutExerciseBlock({
                   style={[styles.repsInput, set.completed && styles.inputDone]}
                   value={set.reps === 0 ? '' : String(set.reps)}
                   keyboardType="number-pad"
-                  placeholder="0"
+                  placeholder={String(exercise.plannedReps)}
                   placeholderTextColor={colors.textMuted}
                   onChangeText={(t) => {
                     const v = parseInt(t, 10);
                     onUpdateSet(exercise.exerciseId, set.id, 'reps', isNaN(v) ? 0 : v);
                   }}
-                  editable={!set.completed}
                 />
+                {set.completed ? (
+                  <Icon name="checkmark-circle" size="sm" color={colors.success} style={styles.setCheck} />
+                ) : null}
               </View>
             ))}
           </View>
@@ -1000,7 +1003,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   setRowDone: {
-    opacity: 0.6,
+    backgroundColor: colors.successLight,
   },
   setNumber: {
     width: 30,
@@ -1010,7 +1013,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   setNumberDone: {
-    color: colors.textSecondary,
+    color: colors.success,
   },
   weightControl: {
     flex: 1.1,
@@ -1057,7 +1060,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   inputDone: {
-    opacity: 0.5,
+    borderColor: colors.success,
+    backgroundColor: colors.successLight,
+  },
+  setCheck: {
+    marginLeft: spacing.sm,
   },
   exFooter: {
     flexDirection: 'row',
