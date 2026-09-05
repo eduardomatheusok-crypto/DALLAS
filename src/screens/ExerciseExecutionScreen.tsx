@@ -36,6 +36,7 @@ import {
   planWarmupSets,
   planPreparationSets,
   isCompositeTechnique,
+  isWorkingSet,
   techniqueName,
   exBlocksFor,
   type AdvancedTechnique,
@@ -137,6 +138,10 @@ export default function ExerciseExecutionScreen() {
   const progress = totalExercises > 0 ? completedCount / totalExercises : 0;
   const completedSets = execExercises.reduce(
     (acc, e) => acc + e.sets.filter((s) => s.completed).length,
+    0,
+  );
+  const workingSetsDone = execExercises.reduce(
+    (acc, e) => acc + e.sets.filter((s) => s.completed && isWorkingSet(s)).length,
     0,
   );
   const totalSets = execExercises.reduce((acc, e) => acc + e.sets.length, 0);
@@ -315,7 +320,11 @@ export default function ExerciseExecutionScreen() {
     await workoutService.invalidate();
     setSaving(false);
     setFinishVisible(false);
-    navigation.navigate('LogDetail', { logId: log.id });
+    navigation.navigate('WorkoutComplete', {
+      durationSeconds: log.durationSeconds,
+      volume: log.totalVolume,
+      series: workingSetsDone,
+    });
   };
 
   if (wLoading) return <Screen><LoadingState /></Screen>;
