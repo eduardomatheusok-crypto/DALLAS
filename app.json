@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fittreino.dallas"
@@ -23,6 +23,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8ccc39ec-844b-4fff-8915-219cd7f2cc2b"
+      }
+    },
+    "owner": "3duard033",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

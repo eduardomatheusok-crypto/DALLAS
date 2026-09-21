@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { Screen, Card, Section, IconButton } from '../components/common';
 import { useUser, useWorkoutLogs } from '../hooks';
 import { useAuth } from '../auth/AuthContext';
@@ -7,6 +9,9 @@ import { colors, spacing, typography, borderRadius } from '../theme';
 import { Icon } from '../theme/icons';
 import { AppIconName } from '../theme/icons';
 import { workoutLogService } from '../services';
+import type { RootStackParamList } from '../navigation/types';
+
+type Nav = StackNavigationProp<RootStackParamList>;
 
 // Direção visual do alto-falante/halter do DALLAS.
 // Nesta etapa apenas apresentamos o conceito, sem o sistema completo do pet.
@@ -24,6 +29,7 @@ function PetMark() {
 }
 
 export default function ProfileScreen() {
+  const navigation = useNavigation<Nav>();
   const { user } = useUser();
   const { logout } = useAuth();
   const { logs } = useWorkoutLogs();
@@ -53,7 +59,7 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{firstName}</Text>
           <Text style={styles.tagline}>Consistência constrói força.</Text>
         </View>
-        <IconButton name="settings" onPress={() => {}} color={colors.text} />
+        <IconButton name="settings" onPress={() => navigation.navigate('Settings')} color={colors.text} />
       </View>
 
       <Section title="Seus números">

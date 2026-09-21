@@ -1,6 +1,23 @@
+export type { User } from './User';
+
 export type {
-  User,
-} from './User';
+  UserTrainingPreferences,
+  TrainingFrequency,
+  TrainingGoal,
+  WeekDay,
+  TrainingFrequencyOption,
+  TrainingGoalOption,
+  WeekDayOption,
+  PlannedDayStatus,
+} from './UserTrainingPreferences';
+export {
+  TRAINING_FREQUENCIES,
+  TRAINING_GOALS,
+  WEEK_DAYS,
+  plannedDayStatus,
+  frequencyWorkingSet,
+  hasTrainingPreferences,
+} from './UserTrainingPreferences';
 
 export type {
   Exercise,
@@ -54,3 +71,10 @@ export {
 export type { GroupSummary, Group, Member } from './Group';
 export type { Competition, CompetitionStatus, RankingEntry, RankingStats } from './Competition';
 export type { ChatMessage } from './ChatMessage';
+
+export type { TrainingSettings } from './TrainingSettings';
+export {
+  DEFAULT_REST_OPTIONS,
+  DEFAULT_TRAINING_SETTINGS,
+  createDefaultTrainingSettings,
+} from './TrainingSettings';

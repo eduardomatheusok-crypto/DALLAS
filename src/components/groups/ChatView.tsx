@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -44,7 +44,7 @@ export default function ChatView({ groupId, myUserId }: { groupId: string; myUse
   const [draft, setDraft] = useState('');
   const inputRef = useRef<TextInput>(null);
 
-  const data = [...messages].reverse();
+  const data = useMemo(() => [...messages].reverse(), [messages]);
 
   const handleSend = async () => {
     const text = draft.trim();

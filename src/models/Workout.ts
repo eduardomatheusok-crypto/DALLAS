@@ -15,6 +15,11 @@ export interface WorkoutExercisePlan {
   workingSets?: number;
   /** Técnica avançada aplicada ao exercício neste treino. */
   advancedTechnique?: AdvancedTechnique;
+  /**
+   * Descanso específico (segundos) após cada série deste exercício.
+   * Quando ausente, usa o descanso padrão das configurações de treino.
+   */
+  restSeconds?: number;
 }
 
 export interface Workout {

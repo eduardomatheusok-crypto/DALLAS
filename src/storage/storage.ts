@@ -9,6 +9,9 @@ const KEYS = {
   workouts: '@treino/workouts',
   logs: '@treino/logs',
   groups: '@treino/groups',
+  trainingPreferences: '@treino/trainingPreferences',
+  trainingSettings: '@treino/trainingSettings',
+  themeMode: '@treino/themeMode',
 } as const;
 
 async function read<T>(key: string, fallback: T): Promise<T> {
@@ -72,6 +75,24 @@ export const storage = {
   },
   async setGroups(groups: GroupSummary[]): Promise<void> {
     return write(KEYS.groups, groups);
+  },
+  async getTrainingPreferences<T>(): Promise<T | null> {
+    return read<T | null>(KEYS.trainingPreferences, null);
+  },
+  async setTrainingPreferences<T>(value: T | null): Promise<void> {
+    return write(KEYS.trainingPreferences, value);
+  },
+  async getTrainingSettings<T>(): Promise<T | null> {
+    return read<T | null>(KEYS.trainingSettings, null);
+  },
+  async setTrainingSettings<T>(value: T | null): Promise<void> {
+    return write(KEYS.trainingSettings, value);
+  },
+  async getThemeMode(): Promise<'light' | 'dark' | 'system' | null> {
+    return read<'light' | 'dark' | 'system' | null>(KEYS.themeMode, null);
+  },
+  async setThemeMode(mode: 'light' | 'dark' | 'system'): Promise<void> {
+    return write(KEYS.themeMode, mode);
   },
   async clear(): Promise<void> {
     await AsyncStorage.clear();

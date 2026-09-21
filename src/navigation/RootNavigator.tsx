@@ -6,6 +6,7 @@ import WorkoutFormScreen from '../screens/WorkoutFormScreen';
 import WorkoutExerciseConfigScreen from '../screens/WorkoutExerciseConfigScreen';
 import ExerciseExecutionScreen from '../screens/ExerciseExecutionScreen';
 import WorkoutCompleteScreen from '../screens/WorkoutCompleteScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import LogDetailScreen from '../screens/LogDetailScreen';
 import ExerciseProgressScreen from '../screens/ExerciseProgressScreen';
 import GroupDetailScreen from '../screens/GroupDetailScreen';
@@ -56,6 +57,11 @@ export default function RootNavigator() {
         name="WorkoutComplete"
         component={WorkoutCompleteScreen}
         options={{ headerShown: false, gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: 'Configurações' }}
       />
       <Stack.Screen
         name="LogDetail"

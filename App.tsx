@@ -1,29 +1,17 @@
 import 'react-native-gesture-handler';
 import 'react-native-get-random-values';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
-import LoginScreen from './src/screens/LoginScreen';
+import EntryFlow from './src/screens/entry/EntryFlow';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { ThemeProvider, useAppTheme } from './src/theme';
 import { LoadingState } from './src/components/common';
 import Screen from './src/components/common/Screen';
-import { colors } from './src/theme';
 import { refreshApiStatus } from './src/api';
-
-const theme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.background,
-    card: colors.surface,
-    text: colors.text,
-    border: colors.border,
-    primary: colors.primary,
-  },
-};
 
 function Root() {
   const { authed, checking } = useAuth();
@@ -37,13 +25,29 @@ function Root() {
   }
 
   if (!authed) {
-    return <LoginScreen />;
+    return <EntryFlow />;
   }
 
   return <RootNavigator />;
 }
 
-export default function App() {
+function AppContent() {
+  const { isDark, colors } = useAppTheme();
+
+  const theme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        card: colors.card,
+        text: colors.text,
+        border: colors.border,
+        primary: colors.primary,
+      },
+    };
+  }, [isDark, colors]);
+
   useEffect(() => {
     refreshApiStatus();
     const sub = AppState.addEventListener('change', (state) => {
@@ -53,13 +57,21 @@ export default function App() {
   }, []);
 
   return (
+    <NavigationContainer theme={theme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Root />
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NavigationContainer theme={theme}>
-          <StatusBar style="light" />
-          <Root />
-        </NavigationContainer>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

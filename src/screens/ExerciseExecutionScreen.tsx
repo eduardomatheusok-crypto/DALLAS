@@ -14,10 +14,11 @@ import { Button, Card, ConfirmationModal, LoadingState } from '../components/com
 import ProgressBar from '../components/common/ProgressBar';
 import Screen from '../components/common/Screen';
 import ExercisePickerModal from '../components/common/ExercisePickerModal';
-import { useWorkouts, useExercises } from '../hooks';
+import { useWorkouts, useExercises, useTrainingSettings, useRestTimer } from '../hooks';
 import { workoutLogService, workoutService, buildLog, exerciseService } from '../services';
 import { colors, spacing, borderRadius, typography } from '../theme';
 import { Icon } from '../theme/icons';
+import RestTimerOverlay from '../components/workout/RestTimerOverlay';
 import type { RootStackParamList } from '../navigation/types';
 import type {
   Exercise,
@@ -66,6 +67,8 @@ export interface ExecutionExercise {
   sets: WorkoutSet[];
   completed: boolean;
   notes: string;
+  /** Descanso específico (s) configurado para este exercício. */
+  restSeconds?: number;
 }
 
 const WEIGHT_STEP = 2.5;
@@ -79,6 +82,21 @@ function techniqueToSetType(kind: AdvancedTechniqueKind | undefined): SetType {
     case 'rest-pause': return 'backoff';
     default: return 'normal';
   }
+}
+
+/** Identifica o exercício cuja contagem de séries válidas concluídas aumentou. */
+function detectNewlyCompletedSet(prev: string, curr: string): { exerciseId: string } | null {
+  const parse = (summary: string) => {
+    const arr = JSON.parse(summary) as { id: string; done: string[] }[];
+    return new Map(arr.map((x) => [x.id, x.done]));
+  };
+  const prevMap = parse(prev);
+  const currMap = parse(curr);
+  for (const [exId, done] of currMap) {
+    const prevDone = prevMap.get(exId) ?? [];
+    if (done.length > prevDone.length) return { exerciseId: exId };
+  }
+  return null;
 }
 
 /** Constrói as categorias de série (com prefixos A/P/S) a partir do plano. */
@@ -114,6 +132,14 @@ export default function ExerciseExecutionScreen() {
 
   const { workouts, loading: wLoading, reload: reloadWorkouts } = useWorkouts();
   const { exercises, reload: reloadExercises } = useExercises();
+  const { settings } = useTrainingSettings();
+  const restTimer = useRestTimer({
+    onEnd: (reason) => {
+      if (reason === 'finished') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+    },
+  });
   const [execExercises, setExecExercises] = useState<ExecutionExercise[]>([]);
   const [lastResults, setLastResults] = useState<Map<string, { weight: number; reps: number }[]>>(new Map());
   const [finishVisible, setFinishVisible] = useState(false);
@@ -145,6 +171,57 @@ export default function ExerciseExecutionScreen() {
     0,
   );
   const totalSets = execExercises.reduce((acc, e) => acc + e.sets.length, 0);
+
+  // Assinatura das séries válidas concluídas, para detectar novos totais sem
+  // depender de closures desatualizadas dentro de `setExecExercises`.
+  const completionSummary = useMemo(
+    () =>
+      JSON.stringify(
+        execExercises.map((e) => ({
+          id: e.exerciseId,
+          done: e.sets.filter((s) => isWorkingSet(s) && s.completed).map((s) => s.id),
+        })),
+      ),
+    [execExercises],
+  );
+  const prevSummaryRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (prevSummaryRef.current === null) {
+      prevSummaryRef.current = completionSummary;
+      return;
+    }
+    if (completionSummary !== prevSummaryRef.current) {
+      const detected = detectNewlyCompletedSet(prevSummaryRef.current, completionSummary);
+      if (detected) {
+        startRestFor(detected.exerciseId);
+      }
+    }
+    prevSummaryRef.current = completionSummary;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completionSummary]);
+
+  // Cancela um descanso pendente ao sair da tela.
+  useEffect(() => () => restTimer.cancel(), [restTimer.cancel]);
+
+  const startRestFor = (exerciseId: string) => {
+    const exercise = execExercises.find((e) => e.exerciseId === exerciseId);
+    if (!exercise) return;
+    const techniqueKind = exercise.advancedTechnique?.kind;
+    if (techniqueKind && techniqueKind !== 'none') return; // intervalos por técnica na fase 2
+
+    const working = exercise.sets.filter((s) => isWorkingSet(s));
+    const done = working.filter((s) => s.completed).length;
+    if (done <= 0 || done >= working.length) return; // primeira ou última série sem descanso
+
+    const duration = exercise.restSeconds ?? settings.defaultRestSeconds;
+    restTimer.start({
+      id: `${exercise.exerciseId}-${Date.now()}`,
+      durationSeconds: duration,
+      title: 'Descanso',
+      subtitle: `Próxima série ${done + 1} de ${working.length} · ${exercise.plannedReps} reps`,
+    });
+  };
 
   const updateSet = (exerciseId: string, setId: string, field: 'weight' | 'reps', value: number) => {
     setExecExercises((prev) =>
@@ -358,6 +435,19 @@ export default function ExerciseExecutionScreen() {
         </Text>
       </View>
 
+      {restTimer.active && restTimer.data ? (
+        <RestTimerOverlay
+          remainingMs={restTimer.remainingMs}
+          totalMs={restTimer.totalMs}
+          title={restTimer.data.title}
+          subtitle={restTimer.data.subtitle}
+          paused={restTimer.paused}
+          onPause={restTimer.pause}
+          onResume={restTimer.resume}
+          onSkip={restTimer.skip}
+        />
+      ) : null}
+
       <FlatList
         data={execExercises}
         keyExtractor={(item) => item.exerciseId}
@@ -470,6 +560,7 @@ function buildSession(
       preparationSets: planPreparationSets(we),
       workingSets: planWorkingSets(we),
       advancedTechnique: we.advancedTechnique,
+      restSeconds: we.restSeconds,
       blocks: buildBlocks(we),
       sets,
       completed: false,

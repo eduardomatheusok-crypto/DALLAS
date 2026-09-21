@@ -121,6 +121,7 @@ export class WorkoutService {
       preparationSets?: number;
       workingSets?: number;
       advancedTechnique?: AdvancedTechnique;
+      restSeconds?: number | null;
     },
   ): Promise<Workout | undefined> {
     const workout = await this.getById(workoutId);
@@ -141,6 +142,9 @@ export class WorkoutService {
         } else {
           next.advancedTechnique = config.advancedTechnique;
         }
+      }
+      if (config.restSeconds !== undefined) {
+        next.restSeconds = config.restSeconds ?? undefined;
       }
       return next;
     });

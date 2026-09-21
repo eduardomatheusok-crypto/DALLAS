@@ -1,4 +1,7 @@
 export { userService } from './UserService';
+export { trainingPreferencesService } from './TrainingPreferencesService';
+export { trainingSettingsService } from './TrainingSettingsService';
+export { RestTimer, type RestTimerState, type RestTimerReason } from './RestTimer';
 export { exerciseService } from './ExerciseService';
 export { workoutService } from './WorkoutService';
 export { workoutLogService, buildLog, computeStreakFromLogs, formatDuration, formatDate, formatTime } from './WorkoutLogService';

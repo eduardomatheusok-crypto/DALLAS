@@ -13,7 +13,7 @@ import {
   Section,
 } from '../components/common';
 import Screen from '../components/common/Screen';
-import { useWorkouts, useExercises } from '../hooks';
+import { useWorkouts, useExercises, useTrainingSettings } from '../hooks';
 import { workoutService } from '../services';
 import { colors, spacing, borderRadius, typography, SET_CATEGORY_THEME } from '../theme';
 import { Icon } from '../theme/icons';
@@ -31,6 +31,7 @@ import {
   ADVANCED_TECHNIQUE_META,
   isCompositeTechnique,
   techniqueName,
+  DEFAULT_REST_OPTIONS,
   type WorkoutExercisePlan,
 } from '../models';
 
@@ -66,6 +67,7 @@ export default function WorkoutExerciseConfigScreen() {
 
   const { workouts, loading: wLoading, reload: reloadWorkouts } = useWorkouts();
   const { exercises } = useExercises();
+  const { settings } = useTrainingSettings();
 
   const [warmup, setWarmup] = useState<number | null>(null);
   const [preparation, setPreparation] = useState<number | null>(null);
@@ -74,6 +76,8 @@ export default function WorkoutExerciseConfigScreen() {
   const [techniquePicker, setTechniquePicker] = useState(false);
   const [exercisePicker, setExercisePicker] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customRest, setCustomRest] = useState(settings.defaultRestSeconds);
+  const [restMode, setRestMode] = useState<'default' | 'custom'>('default');
 
   const workout = useMemo(() => workouts.find((w) => w.id === workoutId), [workouts, workoutId]);
   const plan = useMemo<WorkoutExercisePlan | undefined>(
@@ -97,6 +101,13 @@ export default function WorkoutExerciseConfigScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan?.exerciseId, plan?.order]);
+
+  useEffect(() => {
+    if (!plan) return;
+    setRestMode(plan.restSeconds != null ? 'custom' : 'default');
+    setCustomRest(plan.restSeconds ?? settings.defaultRestSeconds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan?.exerciseId, settings.defaultRestSeconds]);
 
   if (wLoading) {
     return (
@@ -199,6 +210,7 @@ export default function WorkoutExerciseConfigScreen() {
       preparationSets: preparation ?? 0,
       workingSets: working ?? 0,
       advancedTechnique: techniqueKind === 'none' ? { kind: 'none' } : (technique ?? undefined),
+      restSeconds: restMode === 'custom' ? customRest : null,
     });
     await reloadWorkouts();
     setSaving(false);
@@ -253,6 +265,76 @@ export default function WorkoutExerciseConfigScreen() {
               </View>
             );
           })}
+        </Card>
+      </Section>
+
+      <Section title="Descanso">
+        <Card style={styles.restCard} padded={false}>
+          <View style={styles.restHeader}>
+            <View style={styles.restInfo}>
+              <View style={styles.restIconWrap}>
+                <Icon name="clock" size="sm" color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, styles.restTitle]}>Descanso entre séries</Text>
+                <Text style={[typography.caption, styles.restHint]}>
+                  {restMode === 'default'
+                    ? `Usa o padrão (${settings.defaultRestSeconds}s)`
+                    : `${customRest} segundos`}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.restModeRow}>
+            <Pressable
+              onPress={() => setRestMode('default')}
+              style={[styles.modePill, restMode === 'default' && styles.modePillActive]}
+            >
+              <Text style={[styles.modePillText, restMode === 'default' && styles.modePillTextActive]}>
+                Padrão ({settings.defaultRestSeconds}s)
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setRestMode('custom')}
+              style={[styles.modePill, restMode === 'custom' && styles.modePillActive]}
+            >
+              <Text style={[styles.modePillText, restMode === 'custom' && styles.modePillTextActive]}>
+                Personalizado
+              </Text>
+            </Pressable>
+          </View>
+
+          {restMode === 'custom' ? (
+            <View style={styles.restCustomArea}>
+              <View style={styles.restPresetRow}>
+                {DEFAULT_REST_OPTIONS.map((secs) => (
+                  <Pressable
+                    key={secs}
+                    onPress={() => setCustomRest(secs)}
+                    style={[styles.restPreset, customRest === secs && styles.restPresetActive]}
+                  >
+                    <Text
+                      style={[styles.restPresetText, customRest === secs && styles.restPresetTextActive]}
+                    >
+                      {secs}s
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.restStepperRow}>
+                <Text style={[typography.bodySecondary, styles.restStepperLabel]}>Ajuste fino (s)</Text>
+                <Stepper
+                  value={customRest}
+                  onChange={setCustomRest}
+                  min={5}
+                  max={600}
+                  accent={colors.text}
+                  accentLight={colors.border}
+                />
+              </View>
+            </View>
+          ) : null}
         </Card>
       </Section>
 
@@ -526,6 +608,106 @@ const styles = StyleSheet.create({
   },
   techniqueCard: {
     overflow: 'hidden',
+  },
+  restCard: {
+    overflow: 'hidden',
+  },
+  restHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  restInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  restIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.scrim,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  restTitle: {
+    fontWeight: '600',
+  },
+  restHint: {
+    marginTop: 2,
+  },
+  restModeRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  modePill: {
+    flex: 1,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modePillActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.scrim,
+  },
+  modePillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  modePillTextActive: {
+    color: colors.primary,
+  },
+  restCustomArea: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  restPresetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  restPreset: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  restPresetActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.scrim,
+  },
+  restPresetText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  restPresetTextActive: {
+    color: colors.primary,
+  },
+  restStepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    gap: spacing.md,
+  },
+  restStepperLabel: {
+    flex: 1,
   },
   techniqueRow: {
     flexDirection: 'row',

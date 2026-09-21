@@ -7,3 +7,5 @@ export { useGroup } from './useGroup';
 export { useCompetitions } from './useCompetitions';
 export { useRanking } from './useRanking';
 export { useChat } from './useChat';
+export { useTrainingSettings } from './useTrainingSettings';
+export { useRestTimer } from './useRestTimer';

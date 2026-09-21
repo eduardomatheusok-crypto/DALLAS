@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Card } from '../components/common';
-import Screen from '../components/common/Screen';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppTheme, spacing, borderRadius } from '../theme';
+import { Icon } from '../theme/icons';
 import { userService } from '../services';
 import { useAuth } from '../auth/AuthContext';
-import { colors, spacing, borderRadius, typography } from '../theme';
-import { Icon } from '../theme/icons';
+import { entryContent } from '../entry/entryContent';
 
-export default function LoginScreen() {
+interface Props {
+  onBack: () => void;
+  onCreateAccount: () => void;
+}
+
+/**
+ * Tela de login do DALLAS (visual reformulado, mesma lógica de autenticação).
+ * Criar conta agora acontece no onboarding — aqui fica só o acesso.
+ */
+export default function LoginScreen({ onBack, onCreateAccount }: Props) {
+  const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
   const { refresh } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,187 +35,229 @@ export default function LoginScreen() {
 
   const submit = async () => {
     if (!username.trim() || password.length < 4) {
-      setError('Informe nome e senha (mínimo 4 caracteres).');
+      setError('Informe nome de usuário e senha (mínimo 4 caracteres).');
       return;
     }
     setError(null);
     setLoading(true);
     try {
-      if (mode === 'login') {
-        await userService.login(username.trim(), password);
-      } else {
-        await userService.register(username.trim(), password);
-      }
+      await userService.login(username.trim(), password);
       await refresh();
-    } catch (e: any) {
-      setError(e?.message ?? 'Não foi possível acessar sua conta.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível acessar sua conta.');
     } finally {
       setLoading(false);
     }
   };
 
+  const { login } = entryContent;
+
   return (
-    <Screen>
-      <View style={styles.container}>
-        <View style={styles.brand}>
-          <View style={styles.logo}>
-            <Icon name="dumbbell" size={30} color={colors.primary} />
-          </View>
-          <Text style={[typography.overline, styles.brandTag]}>DALLAS</Text>
-          <Text style={styles.brandTitle}>Sua força começa aqui</Text>
-          <Text style={styles.brandSub}>
-            Entre para continuar sua evolução, sequência e treinos.
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + spacing.md, backgroundColor: colors.background },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <Pressable
+            onPress={onBack}
+            hitSlop={8}
+            accessibilityLabel="Voltar"
+            style={({ pressed }) => [styles.backButton, { borderColor: colors.border }, pressed && styles.pressed]}
+          >
+            <Icon name="chevronLeft" size="sm" color={colors.text} />
+          </Pressable>
+          <Text style={[styles.brand, { color: colors.primary }]}>DALLAS</Text>
+        </View>
+      </View>
+
+      {/* Form */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, spacing.xxxl) },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.intro}>
+          <Text style={[styles.title, { color: colors.text }]}>{login.title}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {login.subtitle}
           </Text>
         </View>
 
-        <Card style={styles.formCard}>
-          <View style={styles.tabs}>
-            <Pressable
-              onPress={() => { setMode('login'); setError(null); }}
-              style={[styles.tab, mode === 'login' && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Entrar</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => { setMode('register'); setError(null); }}
-              style={[styles.tab, mode === 'register' && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>Criar conta</Text>
-            </Pressable>
-          </View>
-
-          <Text style={[typography.label, styles.fieldLabel]}>Nome de usuário</Text>
+        <View style={styles.form}>
+          <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Nome de usuário</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
             value={username}
             onChangeText={setUsername}
-            placeholder="ex.: atleta"
+            placeholder={login.usernamePlaceholder}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             editable={!loading}
           />
 
-          <Text style={[typography.label, styles.fieldLabel]}>Senha</Text>
+          <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Senha</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
             value={password}
             onChangeText={setPassword}
-            placeholder="••••••••"
+            placeholder={login.passwordPlaceholder}
             placeholderTextColor={colors.textMuted}
             secureTextEntry
             editable={!loading}
           />
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
-          <Button
-            title={mode === 'login' ? 'Entrar' : 'Criar conta'}
+          <Pressable
             onPress={submit}
-            loading={loading}
+            accessibilityRole="button"
             disabled={loading}
-            icon="checkmarkDone"
-          />
-        </Card>
+            style={({ pressed }) => [
+              styles.enterButton,
+              { backgroundColor: colors.primary },
+              loading && styles.disabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.enterText}>ENTRAR</Text>
+            )}
+          </Pressable>
 
-        {mode === 'register' ? (
-          <Text style={styles.hint}>
-            Sua conta fica vinculada a este dispositivo. Você entra com o mesmo nome e senha.
-          </Text>
-        ) : null}
-      </View>
-    </Screen>
+          <Pressable
+            onPress={onCreateAccount}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.createButton,
+              { borderColor: colors.border },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.createText, { color: colors.text }]}>CRIAR CONTA</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
+  },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl,
-    gap: spacing.xl,
   },
   brand: {
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  logo: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
-    backgroundColor: colors.scrim,
-    borderWidth: 1,
-    borderColor: 'rgba(229, 9, 20, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  brandTag: {
-    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '900',
     letterSpacing: 3,
   },
-  brandTitle: {
-    fontSize: 24,
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xxxl,
+    paddingTop: spacing.xxxl,
+    flexGrow: 1,
+  },
+  intro: {
+    gap: spacing.sm,
+    marginBottom: spacing.xxxl,
+  },
+  title: {
+    fontSize: 30,
     fontWeight: '800',
-    color: colors.text,
-    textAlign: 'center',
-    marginTop: spacing.xs,
+    letterSpacing: -0.5,
   },
-  brandSub: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
+  subtitle: {
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 21,
   },
-  formCard: {
-    padding: spacing.lg,
+  form: {
     gap: spacing.sm,
   },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceLight,
-    borderRadius: borderRadius.md,
-    padding: 4,
-    marginBottom: spacing.md,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: borderRadius.sm,
-  },
-  tabActive: {
-    backgroundColor: colors.primary,
-  },
-  tabText: {
-    color: colors.textSecondary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  tabTextActive: {
-    color: colors.white,
-  },
   fieldLabel: {
-    marginBottom: spacing.xs,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+    marginTop: spacing.sm,
   },
   input: {
-    backgroundColor: colors.surfaceLight,
     borderWidth: 1,
-    borderColor: colors.borderLight,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
-    height: 48,
-    color: colors.text,
+    height: 50,
     fontSize: 15,
   },
   error: {
-    color: colors.danger,
     fontSize: 13,
+    fontWeight: '600',
     marginTop: spacing.xs,
   },
-  hint: {
-    color: colors.textMuted,
-    fontSize: 12,
-    textAlign: 'center',
+  enterButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.xl,
+  },
+  enterText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+  },
+  createButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    marginTop: spacing.md,
+  },
+  createText: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  disabled: {
+    opacity: 0.45,
+  },
+  pressed: {
+    opacity: 0.82,
   },
 });

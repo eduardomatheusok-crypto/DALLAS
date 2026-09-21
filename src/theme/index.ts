@@ -1,4 +1,8 @@
 export { colors, gradient } from './colors';
+export { darkColors, lightColors } from './palette';
+export type { ThemePalette } from './palette';
+export { ThemeProvider, useAppTheme } from './ThemeContext';
+export type { ThemeMode } from './ThemeContext';
 export { typography } from './typography';
 export { spacing, borderRadius } from './spacing';
 export { shadows } from './shadows';
