@@ -35,7 +35,7 @@ export function EmptyState({
       {message ? <Text style={[typography.caption, styles.message]}>{message}</Text> : null}
       {actionLabel && onAction ? (
         <View style={styles.actionWrap}>
-          <Button title={actionLabel} onPress={onAction} compact />
+          <Button title={actionLabel} onPress={onAction} compact fullWidth={false} />
         </View>
       ) : null}
     </View>
@@ -89,5 +89,8 @@ const styles = StyleSheet.create({
   },
   actionWrap: {
     marginTop: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
 });

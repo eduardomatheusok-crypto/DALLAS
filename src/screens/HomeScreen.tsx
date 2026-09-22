@@ -477,6 +477,7 @@ const styles = StyleSheet.create({
   emptyCta: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
     backgroundColor: colors.primary,
     borderRadius: borderRadius.md,
@@ -487,6 +488,9 @@ const styles = StyleSheet.create({
   emptyCtaText: {
     color: colors.white,
     fontWeight: '700',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   summaryRow: {
     flexDirection: 'row',

@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: borderRadius.md,
   },
@@ -109,11 +109,16 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   compact: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
     ...typography.button,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   disabled: {
     opacity: 0.45,

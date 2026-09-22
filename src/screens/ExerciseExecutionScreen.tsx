@@ -521,48 +521,6 @@ export default function ExerciseExecutionScreen() {
         </Text>
       </View>
 
-      {/* Barra de Acesso e Controle Manual do Timer */}
-      <View style={styles.quickTimerBar}>
-        <Pressable
-          style={styles.quickTimerBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            const duration = settings.defaultRestSeconds || 60;
-            restTimer.start({
-              id: `manual-${Date.now()}`,
-              durationSeconds: duration,
-              title: 'Descanso',
-              subtitle: `Timer manual de ${duration}s`,
-            });
-          }}
-        >
-          <Icon name="clock" size="sm" color={colors.primary} />
-          <Text style={styles.quickTimerBtnText}>
-            {restTimer.active ? 'Descanso em andamento' : `Iniciar Timer (${settings.defaultRestSeconds || 60}s)`}
-          </Text>
-        </Pressable>
-
-        <View style={styles.quickTimerChips}>
-          {[30, 60, 90, 120].map((sec) => (
-            <Pressable
-              key={sec}
-              style={styles.quickTimerChip}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                restTimer.start({
-                  id: `manual-${Date.now()}-${sec}`,
-                  durationSeconds: sec,
-                  title: 'Descanso',
-                  subtitle: `Timer manual de ${sec}s`,
-                });
-              }}
-            >
-              <Text style={styles.quickTimerChipText}>{sec}s</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
       {restTimer.active && restTimer.data ? (
         <RestTimerOverlay
           remainingMs={restTimer.remainingMs}
@@ -1568,50 +1526,6 @@ const styles = StyleSheet.create({
   },
   checkBtnPressed: {
     opacity: 0.7,
-  },
-  quickTimerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  quickTimerBtn: {
-    flex: 1.2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.md,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.sm,
-    justifyContent: 'center',
-  },
-  quickTimerBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  quickTimerChips: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  quickTimerChip: {
-    backgroundColor: colors.surfaceLight,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.md,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickTimerChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
   },
   countdownModalBox: {
     backgroundColor: colors.surface,
