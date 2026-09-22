@@ -31,7 +31,8 @@
     },
     "owner": "3duard033",
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-audio"
     ]
   }
 }

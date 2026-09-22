@@ -186,10 +186,11 @@ export default function WorkoutFormScreen() {
                   onChange={(v) => updateField(item.key, 'plannedReps', v)}
                 />
                 <NumberField
-                  label="Peso (kg)"
+                  label="Carga pré-definida (kg)"
                   value={item.initialWeight ?? 0}
                   onChange={(v) => updateField(item.key, 'initialWeight', v)}
                   allowZero
+                  isDecimal
                 />
               </View>
             </Card>
@@ -233,11 +234,13 @@ function NumberField({
   value,
   onChange,
   allowZero = false,
+  isDecimal = false,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   allowZero?: boolean;
+  isDecimal?: boolean;
 }) {
   const [text, setText] = useState(value === 0 && allowZero ? '' : String(value));
 
@@ -247,7 +250,8 @@ function NumberField({
   }, [value]);
 
   const submit = () => {
-    const parsed = parseInt(text, 10);
+    const clean = text.replace(',', '.');
+    const parsed = isDecimal ? parseFloat(clean) : parseInt(clean, 10);
     if (isNaN(parsed)) {
       onChange(allowZero ? 0 : 1);
       setText(allowZero ? '' : '1');
@@ -263,7 +267,7 @@ function NumberField({
         style={styles.fieldInput}
         value={text}
         onChangeText={setText}
-        keyboardType="number-pad"
+        keyboardType={isDecimal ? 'decimal-pad' : 'number-pad'}
         onBlur={submit}
       />
     </View>

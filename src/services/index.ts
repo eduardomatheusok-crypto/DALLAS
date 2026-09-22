@@ -8,4 +8,5 @@ export { workoutLogService, buildLog, computeStreakFromLogs, formatDuration, for
 export { groupService } from './GroupService';
 export { competitionService, competitiveStatusLabel } from './CompetitionService';
 export { chatService } from './ChatService';
+export { playTimerEndSound } from './soundService';
 export { refreshApiStatus, isApiOnline, onApiStatusChange } from '../api';

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -15,7 +17,7 @@ import ProgressBar from '../components/common/ProgressBar';
 import Screen from '../components/common/Screen';
 import ExercisePickerModal from '../components/common/ExercisePickerModal';
 import { useWorkouts, useExercises, useTrainingSettings, useRestTimer } from '../hooks';
-import { workoutLogService, workoutService, buildLog, exerciseService } from '../services';
+import { workoutLogService, workoutService, buildLog, exerciseService, playTimerEndSound } from '../services';
 import { colors, spacing, borderRadius, typography } from '../theme';
 import { Icon } from '../theme/icons';
 import RestTimerOverlay from '../components/workout/RestTimerOverlay';
@@ -69,6 +71,14 @@ export interface ExecutionExercise {
   notes: string;
   /** Descanso específico (s) configurado para este exercício. */
   restSeconds?: number;
+}
+
+export interface RestCountdownInfo {
+  exerciseId: string;
+  exerciseName: string;
+  setNumber: number;
+  restSeconds: number;
+  nextSetNumber?: number;
 }
 
 const WEIGHT_STEP = 2.5;
@@ -136,7 +146,7 @@ export default function ExerciseExecutionScreen() {
   const restTimer = useRestTimer({
     onEnd: (reason) => {
       if (reason === 'finished') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        playTimerEndSound();
       }
     },
   });
@@ -145,6 +155,8 @@ export default function ExerciseExecutionScreen() {
   const [finishVisible, setFinishVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [restCountdownModal, setRestCountdownModal] = useState<RestCountdownInfo | null>(null);
+  const [activeSetId, setActiveSetId] = useState<string | null>(null);
 
   const startedAtRef = useRef<string>(new Date().toISOString());
 
@@ -172,71 +184,131 @@ export default function ExerciseExecutionScreen() {
   );
   const totalSets = execExercises.reduce((acc, e) => acc + e.sets.length, 0);
 
-  // Assinatura das séries válidas concluídas, para detectar novos totais sem
-  // depender de closures desatualizadas dentro de `setExecExercises`.
-  const completionSummary = useMemo(
-    () =>
-      JSON.stringify(
-        execExercises.map((e) => ({
-          id: e.exerciseId,
-          done: e.sets.filter((s) => isWorkingSet(s) && s.completed).map((s) => s.id),
-        })),
-      ),
-    [execExercises],
-  );
-  const prevSummaryRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (prevSummaryRef.current === null) {
-      prevSummaryRef.current = completionSummary;
-      return;
-    }
-    if (completionSummary !== prevSummaryRef.current) {
-      const detected = detectNewlyCompletedSet(prevSummaryRef.current, completionSummary);
-      if (detected) {
-        startRestFor(detected.exerciseId);
-      }
-    }
-    prevSummaryRef.current = completionSummary;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completionSummary]);
-
-  // Cancela um descanso pendente ao sair da tela.
+  // Cancela um timer pendente ao sair da tela.
   useEffect(() => () => restTimer.cancel(), [restTimer.cancel]);
 
-  const startRestFor = (exerciseId: string) => {
-    const exercise = execExercises.find((e) => e.exerciseId === exerciseId);
-    if (!exercise) return;
-    const techniqueKind = exercise.advancedTechnique?.kind;
-    if (techniqueKind && techniqueKind !== 'none') return; // intervalos por técnica na fase 2
-
-    const working = exercise.sets.filter((s) => isWorkingSet(s));
-    const done = working.filter((s) => s.completed).length;
-    if (done <= 0 || done >= working.length) return; // primeira ou última série sem descanso
-
-    const duration = exercise.restSeconds ?? settings.defaultRestSeconds;
+  const handleStartRest = (info: RestCountdownInfo) => {
+    setRestCountdownModal(null);
     restTimer.start({
-      id: `${exercise.exerciseId}-${Date.now()}`,
-      durationSeconds: duration,
-      title: 'Descanso',
-      subtitle: `Próxima série ${done + 1} de ${working.length} · ${exercise.plannedReps} reps`,
+      id: `rest-${info.exerciseId}-${info.setNumber}-${Date.now()}`,
+      durationSeconds: info.restSeconds,
+      title: `${info.exerciseName} · Descanso`,
+      subtitle: info.nextSetNumber ? `Próxima: Série ${info.nextSetNumber}` : `Série ${info.setNumber} concluída`,
     });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  };
+
+  const toggleSetCompleted = (exerciseId: string, setId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    let triggeredRest: RestCountdownInfo | null = null;
+
+    setExecExercises((prev) =>
+      prev.map((e) => {
+        if (e.exerciseId !== exerciseId) return e;
+        const setIdx = e.sets.findIndex((s) => s.id === setId);
+        if (setIdx === -1) return e;
+        const target = e.sets[setIdx];
+
+        // Se já estava concluída, apenas desmarca sem disparar timer
+        if (target.completed) {
+          const updated = [...e.sets];
+          updated[setIdx] = { ...target, completed: false };
+          return { ...e, sets: updated, completed: false };
+        }
+
+        // Se estava pendente, obtém valores com fallback inteligente
+        const history = lastResults.get(exerciseId);
+        const historyItem = history?.[setIdx] ?? (history && history.length > 0 ? history[history.length - 1] : null);
+
+        let weight = target.weight;
+        let reps = target.reps;
+
+        if (weight <= 0) {
+          const prevSet = setIdx > 0 ? e.sets[setIdx - 1] : null;
+          if (prevSet && prevSet.weight > 0) {
+            weight = prevSet.weight;
+          } else if (historyItem && historyItem.weight > 0) {
+            weight = historyItem.weight;
+          } else {
+            const planEx = workout?.exercises.find((we) => we.exerciseId === exerciseId);
+            weight = planEx?.initialWeight ?? 0;
+          }
+        }
+
+        if (reps <= 0) {
+          const prevSet = setIdx > 0 ? e.sets[setIdx - 1] : null;
+          if (prevSet && prevSet.reps > 0) {
+            reps = prevSet.reps;
+          } else if (historyItem && historyItem.reps > 0) {
+            reps = historyItem.reps;
+          } else {
+            reps = e.plannedReps > 0 ? e.plannedReps : 10;
+          }
+        }
+
+        const updated = [...e.sets];
+        updated[setIdx] = {
+          ...target,
+          weight,
+          reps,
+          completed: true,
+          isCustomWeight: target.isCustomWeight ?? false,
+          isCustomReps: target.isCustomReps ?? false,
+        };
+
+        // Propaga peso e reps para a próxima série caso esteja pendente e zerada
+        if (setIdx + 1 < updated.length) {
+          const next = updated[setIdx + 1];
+          if (!next.completed && next.weight <= 0 && next.reps <= 0) {
+            updated[setIdx + 1] = {
+              ...next,
+              weight,
+              reps,
+            };
+          }
+        }
+
+        const allDone = updated.every((s) => s.completed);
+
+        // Dispara o modal de contagem de descanso ao concluir a série
+        const duration = e.restSeconds ?? settings.defaultRestSeconds ?? 60;
+        triggeredRest = {
+          exerciseId: e.exerciseId,
+          exerciseName: e.exerciseName,
+          setNumber: target.setNumber,
+          restSeconds: duration,
+          nextSetNumber: setIdx + 1 < updated.length ? updated[setIdx + 1].setNumber : undefined,
+        };
+
+        return { ...e, sets: updated, completed: allDone };
+      }),
+    );
+
+    if (triggeredRest) {
+      setRestCountdownModal(triggeredRest);
+    }
   };
 
   const updateSet = (exerciseId: string, setId: string, field: 'weight' | 'reps', value: number) => {
     setExecExercises((prev) =>
       prev.map((e) => {
         if (e.exerciseId !== exerciseId) return e;
-        return {
-          ...e,
-          sets: e.sets.map((s) => {
-            if (s.id !== setId) return s;
-            const next = { ...s, [field]: value };
-            // Uma série é considerada feita quando peso e repetições são registrados.
-            next.completed = next.weight > 0 && next.reps > 0;
-            return next;
-          }),
-        };
+        const setIdx = e.sets.findIndex((s) => s.id === setId);
+        if (setIdx === -1) return e;
+        const updated = [...e.sets];
+        const isCustomField = field === 'weight' ? 'isCustomWeight' : 'isCustomReps';
+        const next = { ...updated[setIdx], [field]: value, [isCustomField]: true };
+        updated[setIdx] = next;
+
+        // Se o usuário digitou uma nova carga positiva, propaga como sugestão para a próxima série pendente não customizada
+        if (field === 'weight' && value > 0 && setIdx + 1 < updated.length) {
+          const nextSet = updated[setIdx + 1];
+          if (!nextSet.completed && !nextSet.isCustomWeight) {
+            updated[setIdx + 1] = { ...nextSet, weight: value };
+          }
+        }
+
+        return { ...e, sets: updated };
       }),
     );
   };
@@ -266,16 +338,30 @@ export default function ExerciseExecutionScreen() {
     setExecExercises((prev) =>
       prev.map((e) => {
         if (e.exerciseId !== exerciseId) return e;
-        return {
-          ...e,
-          sets: e.sets.map((s) => {
-              if (s.id !== setId) return s;
-              const weight = Math.max(0, Math.round((s.weight + delta) * 10) / 10);
-              const next = { ...s, weight };
-              next.completed = next.weight > 0 && next.reps > 0;
-              return next;
-            }),
-        };
+        const setIdx = e.sets.findIndex((s) => s.id === setId);
+        if (setIdx === -1) return e;
+        const target = e.sets[setIdx];
+
+        let baseWeight = target.weight;
+        if (baseWeight <= 0) {
+          const history = lastResults.get(exerciseId);
+          const historyItem = history?.[setIdx] ?? (history && history.length > 0 ? history[history.length - 1] : null);
+          baseWeight = historyItem?.weight ?? workout?.exercises.find((we) => we.exerciseId === exerciseId)?.initialWeight ?? 0;
+        }
+
+        const weight = Math.max(0, Math.round((baseWeight + delta) * 10) / 10);
+        const updated = [...e.sets];
+        updated[setIdx] = { ...target, weight };
+
+        // Propaga para a próxima série pendente e zerada
+        if (setIdx + 1 < updated.length) {
+          const nextSet = updated[setIdx + 1];
+          if (!nextSet.completed && nextSet.weight <= 0) {
+            updated[setIdx + 1] = { ...nextSet, weight };
+          }
+        }
+
+        return { ...e, sets: updated };
       }),
     );
   };
@@ -435,6 +521,48 @@ export default function ExerciseExecutionScreen() {
         </Text>
       </View>
 
+      {/* Barra de Acesso e Controle Manual do Timer */}
+      <View style={styles.quickTimerBar}>
+        <Pressable
+          style={styles.quickTimerBtn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            const duration = settings.defaultRestSeconds || 60;
+            restTimer.start({
+              id: `manual-${Date.now()}`,
+              durationSeconds: duration,
+              title: 'Descanso',
+              subtitle: `Timer manual de ${duration}s`,
+            });
+          }}
+        >
+          <Icon name="clock" size="sm" color={colors.primary} />
+          <Text style={styles.quickTimerBtnText}>
+            {restTimer.active ? 'Descanso em andamento' : `Iniciar Timer (${settings.defaultRestSeconds || 60}s)`}
+          </Text>
+        </Pressable>
+
+        <View style={styles.quickTimerChips}>
+          {[30, 60, 90, 120].map((sec) => (
+            <Pressable
+              key={sec}
+              style={styles.quickTimerChip}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                restTimer.start({
+                  id: `manual-${Date.now()}-${sec}`,
+                  durationSeconds: sec,
+                  title: 'Descanso',
+                  subtitle: `Timer manual de ${sec}s`,
+                });
+              }}
+            >
+              <Text style={styles.quickTimerChipText}>{sec}s</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
       {restTimer.active && restTimer.data ? (
         <RestTimerOverlay
           remainingMs={restTimer.remainingMs}
@@ -458,7 +586,9 @@ export default function ExerciseExecutionScreen() {
           <WorkoutExerciseBlock
             exercise={item}
             lastResult={lastResults.get(item.exerciseId)}
+            activeSetId={activeSetId}
             onUpdateSet={updateSet}
+            onToggleSetCompleted={toggleSetCompleted}
             onUpdateNotes={updateNotes}
             onToggleBlock={toggleBlock}
             onBumpWeight={bumpWeight}
@@ -508,7 +638,167 @@ export default function ExerciseExecutionScreen() {
         onConfirm={finishWorkout}
         onCancel={() => setFinishVisible(false)}
       />
+
+      {/* Modal com contagem regressiva de 3s e relógio tremendo ao concluir série */}
+      <StartRestCountdownModal
+        info={restCountdownModal}
+        onStartRest={handleStartRest}
+        onCancel={() => setRestCountdownModal(null)}
+      />
     </View>
+  );
+}
+
+interface StartRestCountdownModalProps {
+  info: RestCountdownInfo | null;
+  onStartRest: (info: RestCountdownInfo) => void;
+  onCancel: () => void;
+}
+
+function StartRestCountdownModal({
+  info,
+  onStartRest,
+  onCancel,
+}: StartRestCountdownModalProps) {
+  const [count, setCount] = useState(3);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const currentInfoRef = useRef(info);
+  currentInfoRef.current = info;
+
+  useEffect(() => {
+    if (!info) {
+      setCount(3);
+      shakeAnim.setValue(0);
+      scaleAnim.setValue(1);
+      return;
+    }
+
+    setCount(3);
+    scaleAnim.setValue(1.4);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 4,
+      useNativeDriver: true,
+    }).start();
+
+    const runShakeAndStart = () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      shakeAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: -14, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 14, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -12, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 12, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -8, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 8, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -4, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 4, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
+      ]).start(() => {
+        setTimeout(() => {
+          if (currentInfoRef.current) {
+            onStartRest(currentInfoRef.current);
+          }
+        }, 350);
+      });
+    };
+
+    const t1 = setTimeout(() => {
+      setCount(2);
+      scaleAnim.setValue(1.4);
+      Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }, 1000);
+
+    const t2 = setTimeout(() => {
+      setCount(1);
+      scaleAnim.setValue(1.4);
+      Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }, 2000);
+
+    const t3 = setTimeout(() => {
+      setCount(0);
+      runShakeAndStart();
+    }, 3000);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [info, onStartRest, scaleAnim, shakeAnim]);
+
+  if (!info) return null;
+
+  const shakeRotate = shakeAnim.interpolate({
+    inputRange: [-14, 14],
+    outputRange: ['-18deg', '18deg'],
+  });
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
+      <Pressable style={styles.modalOverlay} onPress={onCancel}>
+        <Pressable style={styles.countdownModalBox} onPress={(e) => e.stopPropagation()}>
+          {/* Relógio animado com tremor shake */}
+          <Animated.View
+            style={[
+              styles.countdownIconWrap,
+              {
+                transform: [
+                  { translateX: shakeAnim },
+                  { rotate: shakeRotate },
+                ],
+              },
+            ]}
+          >
+            <Icon name="clock" size="lg" color={colors.white} />
+          </Animated.View>
+
+          <Text style={[typography.overline, styles.countdownOverline]}>
+            SÉRIE {info.setNumber} CONCLUÍDA
+          </Text>
+
+          <Text style={[typography.title, styles.countdownTitle]}>
+            O seu timer irá começar em:
+          </Text>
+
+          <View style={styles.countdownNumberContainer}>
+            <Animated.Text
+              style={[
+                styles.countdownBigNumber,
+                { transform: [{ scale: scaleAnim }] },
+                count === 0 && styles.countdownNumberZero,
+              ]}
+            >
+              {count}
+            </Animated.Text>
+            <Text style={styles.countdownSecLabel}>segundos</Text>
+          </View>
+
+          <Text style={styles.countdownInfoText}>
+            Descanso de {info.restSeconds}s · {info.exerciseName}
+          </Text>
+
+          <View style={styles.countdownActionsRow}>
+            <Button
+              title="Pular descanso"
+              variant="secondary"
+              onPress={onCancel}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="Iniciar agora"
+              variant="primary"
+              icon="play"
+              onPress={() => onStartRest(info)}
+              style={{ flex: 1.2 }}
+            />
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -526,7 +816,7 @@ function buildBlocks(plan: WorkoutExercisePlan): WorkoutLogBlock[] {
 function buildSession(
   planExercises: WorkoutExercisePlan[],
   exercises: Exercise[],
-  setExec: (v: ExecutionExercise[]) => void,
+  setExec: React.Dispatch<React.SetStateAction<ExecutionExercise[]>>,
   setLast: (v: Map<string, { weight: number; reps: number }[]>) => void,
 ) {
   const ordered = [...planExercises].sort((a, b) => a.order - b.order);
@@ -537,19 +827,15 @@ function buildSession(
     const sets = segments.map((seg, i) => ({
       id: `p-${i}`,
       setNumber: i + 1,
-      weight: 0,
-      reps: 0,
+      // Carga e repetições pré-definidas para todo o exercício
+      weight: initialWeight,
+      reps: we.plannedReps > 0 ? we.plannedReps : 10,
       completed: false,
       type: seg.type,
       category: seg.category,
+      isCustomWeight: false,
+      isCustomReps: false,
     }));
-    // Aplica o peso inicial apenas na primeira série válida.
-    const firstWorking = sets.findIndex((s) => (s.category ?? 'working') === 'working');
-    if (firstWorking >= 0) {
-      sets[firstWorking] = { ...sets[firstWorking], weight: initialWeight };
-    } else if (sets.length > 0) {
-      sets[0] = { ...sets[0], weight: initialWeight };
-    }
     return {
       exerciseId: we.exerciseId,
       exerciseName: ex?.name ?? 'Exercício',
@@ -572,16 +858,38 @@ function buildSession(
     const map = new Map<string, { weight: number; reps: number }[]>();
     for (const we of ordered) {
       const last = await workoutLogService.getLastByExercise(we.exerciseId);
-      if (last) map.set(we.exerciseId, last);
+      if (last && last.length > 0) {
+        map.set(we.exerciseId, last);
+      }
     }
     setLast(map);
+    // Se o exercício não tinha peso pré-definido manualmente mas possui histórico anterior,
+    // preenche com o peso do último treino para facilitar a vida do usuário.
+    setExec((curr) =>
+      curr.map((e) => {
+        const history = map.get(e.exerciseId);
+        if (!history || history.length === 0) return e;
+        return {
+          ...e,
+          sets: e.sets.map((s, idx) => {
+            if (s.completed || s.isCustomWeight) return s;
+            const hItem = history[idx] ?? history[history.length - 1];
+            const weight = s.weight > 0 ? s.weight : (hItem?.weight ?? 0);
+            const reps = s.reps > 0 ? s.reps : (hItem?.reps ?? e.plannedReps ?? 10);
+            return { ...s, weight, reps, isCustomWeight: false, isCustomReps: false };
+          }),
+        };
+      }),
+    );
   })();
 }
 
 function WorkoutExerciseBlock({
   exercise,
   lastResult,
+  activeSetId,
   onUpdateSet,
+  onToggleSetCompleted,
   onUpdateNotes,
   onToggleBlock,
   onBumpWeight,
@@ -592,7 +900,9 @@ function WorkoutExerciseBlock({
 }: {
   exercise: ExecutionExercise;
   lastResult?: { weight: number; reps: number }[];
+  activeSetId?: string | null;
   onUpdateSet: (exerciseId: string, setId: string, field: 'weight' | 'reps', value: number) => void;
+  onToggleSetCompleted: (exerciseId: string, setId: string) => void;
   onUpdateNotes: (exerciseId: string, notes: string) => void;
   onToggleBlock: (exerciseId: string, blockOrder: number) => void;
   onBumpWeight: (exerciseId: string, setId: string, delta: number) => void;
@@ -612,6 +922,7 @@ function WorkoutExerciseBlock({
   const showSuggestion = suggestion && doneCount > 0;
   const hasTechnique =
     !!exercise.advancedTechnique && exercise.advancedTechnique.kind !== 'none';
+  const nextPendingSet = exercise.sets.find((s) => !s.completed);
 
   // Agrupa as séries por categoria, preservando a ordem.
   const segments = useMemo(() => {
@@ -712,59 +1023,99 @@ function WorkoutExerciseBlock({
                 {sets.length} {sets.length === 1 ? 'série' : 'séries'}
               </Text>
             </View>
-            {sets.map((set) => (
-              <View
-                key={set.id}
-                style={[styles.setRow, set.completed && styles.setRowDone]}
-              >
-                <Text style={[styles.setNumber, set.completed && styles.setNumberDone]}>
-                  {set.setNumber}
-                </Text>
 
-                <View style={styles.weightControl}>
-                  <Pressable
-                    style={({ pressed }) => [styles.step, pressed && styles.stepPressed]}
-                    onPress={() => onBumpWeight(exercise.exerciseId, set.id, -WEIGHT_STEP)}
-                    hitSlop={6}
-                  >
-                    <Icon name="remove" size="sm" color={colors.textSecondary} />
-                  </Pressable>
+            <View style={styles.setTableHeader}>
+              <Text style={[styles.setHeaderText, styles.colSet]}>#</Text>
+              <Text style={[styles.setHeaderText, styles.colPrev]}>ANTERIOR</Text>
+              <Text style={[styles.setHeaderText, styles.colWeight]}>KG</Text>
+              <Text style={[styles.setHeaderText, styles.colReps]}>REPS</Text>
+              <Text style={[styles.setHeaderText, styles.colCheck]}>✓</Text>
+            </View>
+
+            {sets.map((set) => {
+              const prevItem = lastResult?.[set.setNumber - 1] ?? (lastResult && lastResult.length > 0 ? lastResult[lastResult.length - 1] : null);
+              const prevText = prevItem && (prevItem.weight > 0 || prevItem.reps > 0)
+                ? `${prevItem.weight}k × ${prevItem.reps}`
+                : '—';
+              const placeholderWeight = prevItem && prevItem.weight > 0 ? String(prevItem.weight) : '0';
+              const placeholderReps = prevItem && prevItem.reps > 0 ? String(prevItem.reps) : String(exercise.plannedReps);
+              const isActive = activeSetId === set.id;
+
+              return (
+                <View
+                  key={set.id}
+                  style={[
+                    styles.setRow,
+                    set.completed && styles.setRowDone,
+                    isActive && styles.setRowActive,
+                  ]}
+                >
+                  <Text style={[styles.setNumber, styles.colSet, set.completed && styles.setNumberDone]}>
+                    {set.setNumber}
+                  </Text>
+
+                  <View style={[styles.prevCol, styles.colPrev]}>
+                    <Text style={styles.prevText} numberOfLines={1}>
+                      {prevText}
+                    </Text>
+                  </View>
+
                   <TextInput
-                    style={[styles.valueInput, set.completed && styles.inputDone]}
+                    style={[
+                      styles.valueInput,
+                      styles.colWeight,
+                      set.isCustomWeight ? styles.inputValueCustom : styles.inputValueDefault,
+                      set.completed && styles.inputDone,
+                      isActive && styles.inputActive,
+                    ]}
                     value={set.weight === 0 ? '' : String(set.weight)}
-                    keyboardType="number-pad"
-                    placeholder="0"
+                    keyboardType="decimal-pad"
+                    placeholder={placeholderWeight}
                     placeholderTextColor={colors.textMuted}
                     onChangeText={(t) => {
-                      const v = parseInt(t, 10);
+                      const clean = t.replace(',', '.');
+                      const v = parseFloat(clean);
                       onUpdateSet(exercise.exerciseId, set.id, 'weight', isNaN(v) ? 0 : v);
                     }}
                   />
+
+                  <TextInput
+                    style={[
+                      styles.repsInput,
+                      styles.colReps,
+                      set.isCustomReps ? styles.inputValueCustom : styles.inputValueDefault,
+                      set.completed && styles.inputDone,
+                      isActive && styles.inputActive,
+                    ]}
+                    value={set.reps === 0 ? '' : String(set.reps)}
+                    keyboardType="number-pad"
+                    placeholder={placeholderReps}
+                    placeholderTextColor={colors.textMuted}
+                    onChangeText={(t) => {
+                      const v = parseInt(t, 10);
+                      onUpdateSet(exercise.exerciseId, set.id, 'reps', isNaN(v) ? 0 : v);
+                    }}
+                  />
+
                   <Pressable
-                    style={({ pressed }) => [styles.step, pressed && styles.stepPressed]}
-                    onPress={() => onBumpWeight(exercise.exerciseId, set.id, WEIGHT_STEP)}
-                    hitSlop={6}
+                    style={({ pressed }) => [
+                      styles.checkBtn,
+                      styles.colCheck,
+                      set.completed ? styles.checkBtnDone : styles.checkBtnPending,
+                      pressed && styles.checkBtnPressed,
+                    ]}
+                    onPress={() => onToggleSetCompleted(exercise.exerciseId, set.id)}
+                    hitSlop={8}
                   >
-                    <Icon name="add" size="sm" color={colors.textSecondary} />
+                    <Icon
+                      name="checkmark"
+                      size="sm"
+                      color={set.completed ? colors.white : colors.textMuted}
+                    />
                   </Pressable>
                 </View>
-
-                <TextInput
-                  style={[styles.repsInput, set.completed && styles.inputDone]}
-                  value={set.reps === 0 ? '' : String(set.reps)}
-                  keyboardType="number-pad"
-                  placeholder={String(exercise.plannedReps)}
-                  placeholderTextColor={colors.textMuted}
-                  onChangeText={(t) => {
-                    const v = parseInt(t, 10);
-                    onUpdateSet(exercise.exerciseId, set.id, 'reps', isNaN(v) ? 0 : v);
-                  }}
-                />
-                {set.completed ? (
-                  <Icon name="checkmark-circle" size="sm" color={colors.success} style={styles.setCheck} />
-                ) : null}
-              </View>
-            ))}
+              );
+            })}
           </View>
         );
       })}
@@ -1095,76 +1446,319 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
   },
+  setTableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 6,
+    paddingHorizontal: 2,
+  },
+  setHeaderText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  colSet: {
+    width: 26,
+  },
+  colPrev: {
+    width: 66,
+  },
+  colWeight: {
+    flex: 1,
+  },
+  colReps: {
+    flex: 1,
+  },
+  colCheck: {
+    width: 44,
+  },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     borderRadius: borderRadius.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
   },
   setRowDone: {
     backgroundColor: colors.successLight,
   },
+  setRowActive: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(229, 9, 20, 0.08)',
+  },
   setNumber: {
-    width: 30,
+    width: 26,
     textAlign: 'center',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
   },
   setNumberDone: {
     color: colors.success,
   },
-  weightControl: {
-    flex: 1.1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  step: {
-    width: 38,
-    height: 44,
+  prevCol: {
+    width: 66,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceLight,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    paddingHorizontal: 2,
   },
-  stepPressed: {
-    backgroundColor: colors.elevated,
+  prevText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   valueInput: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
+    height: 44,
     backgroundColor: colors.surfaceLight,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
     borderColor: colors.borderLight,
     textAlign: 'center',
-    height: 44,
-    color: colors.text,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginRight: 6,
   },
   repsInput: {
-    flex: 1,
+    height: 44,
     backgroundColor: colors.surfaceLight,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
     borderColor: colors.borderLight,
     textAlign: 'center',
-    height: 44,
-    color: colors.text,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginRight: 6,
+  },
+  inputValueDefault: {
+    color: colors.textSecondary,
+  },
+  inputValueCustom: {
+    color: colors.text,
   },
   inputDone: {
     borderColor: colors.success,
     backgroundColor: colors.successLight,
+    color: colors.text,
   },
-  setCheck: {
-    marginLeft: spacing.sm,
+  inputActive: {
+    borderColor: colors.primary,
+  },
+  checkBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  checkBtnPending: {
+    backgroundColor: colors.surfaceLight,
+    borderColor: colors.borderLight,
+  },
+  checkBtnDone: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  checkBtnPressed: {
+    opacity: 0.7,
+  },
+  quickTimerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  quickTimerBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    justifyContent: 'center',
+  },
+  quickTimerBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  quickTimerChips: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  quickTimerChip: {
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickTimerChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  countdownModalBox: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xxl,
+    padding: spacing.xl,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  countdownIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  countdownOverline: {
+    color: colors.primary,
+    marginBottom: 4,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  countdownTitle: {
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    color: colors.text,
+  },
+  countdownNumberContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: spacing.md,
+  },
+  countdownBigNumber: {
+    fontSize: 72,
+    fontWeight: '900',
+    color: colors.text,
+    lineHeight: 76,
+  },
+  countdownNumberZero: {
+    color: colors.primary,
+  },
+  countdownSecLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  countdownInfoText: {
+    ...typography.body,
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  countdownActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalBox: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xxl,
+    padding: spacing.xl,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  modalIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: colors.scrim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalOverline: {
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  modalTitle: {
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  modalSubtitle: {
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  modalTargetCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceLight,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginBottom: spacing.md,
+  },
+  modalTargetCol: {
+    alignItems: 'center',
+  },
+  modalTargetLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  modalTargetVal: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  modalTargetDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.borderLight,
+  },
+  modalNotice: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.sm,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
   },
   exFooter: {
     flexDirection: 'row',

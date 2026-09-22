@@ -27,6 +27,10 @@ export interface WorkoutSet {
   type: SetType;
   /** Categoria da série. Ausente em dados antigos => tratada como `working`. */
   category?: SetCategory;
+  /** Indica se o peso foi digitado/alterado manualmente pelo usuário (em vez de pré-definido). */
+  isCustomWeight?: boolean;
+  /** Indica se as reps foram digitadas/alteradas manualmente pelo usuário (em vez de pré-definidas). */
+  isCustomReps?: boolean;
 }
 
 /**
