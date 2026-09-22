@@ -35,6 +35,7 @@ export interface WorkoutExercisePlanDto {
   preparationSets?: number;
   workingSets?: number;
   advancedTechnique?: AdvancedTechniqueDto;
+  restSeconds?: number;
 }
 
 export interface WorkoutDto {
@@ -164,6 +165,7 @@ export function workoutFromDto(d: WorkoutDto): Workout {
       preparationSets: e.preparationSets,
       workingSets: e.workingSets,
       advancedTechnique: e.advancedTechnique ? techniqueFromDto(e.advancedTechnique) : undefined,
+      restSeconds: e.restSeconds ?? undefined,
     })),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,

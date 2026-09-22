@@ -47,6 +47,9 @@ public class WorkoutExercisePlanEntity {
     @Column(columnDefinition = "text")
     private String advancedTechnique;
 
+    /** Descanso específico em segundos para este exercício (nullable). */
+    private Integer restSeconds;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -79,4 +82,7 @@ public class WorkoutExercisePlanEntity {
 
     public String getAdvancedTechnique() { return advancedTechnique; }
     public void setAdvancedTechnique(String advancedTechnique) { this.advancedTechnique = advancedTechnique; }
+
+    public Integer getRestSeconds() { return restSeconds; }
+    public void setRestSeconds(Integer restSeconds) { this.restSeconds = restSeconds; }
 }

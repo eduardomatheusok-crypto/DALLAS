@@ -109,6 +109,7 @@ public class WorkoutService {
             plan.setPreparationSets(in.preparationSets());
             plan.setWorkingSets(in.workingSets());
             plan.setAdvancedTechnique(serializeTechnique(in.advancedTechnique()));
+            plan.setRestSeconds(in.restSeconds());
             plans.add(plan);
         }
         return plans;

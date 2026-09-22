@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
 import { Button, Card, ConfirmationModal, LoadingState } from '../components/common';
@@ -159,6 +159,7 @@ export default function ExerciseExecutionScreen() {
   const [activeSetId, setActiveSetId] = useState<string | null>(null);
 
   const startedAtRef = useRef<string>(new Date().toISOString());
+  const isInitializedRef = useRef(false);
 
   const workout = useMemo(
     () => workouts.find((w) => w.id === workoutId),
@@ -166,10 +167,39 @@ export default function ExerciseExecutionScreen() {
   );
 
   useEffect(() => {
-    if (!workout) return;
+    if (!workout || isInitializedRef.current) return;
     buildSession(workout.exercises, exercises, setExecExercises, setLastResults);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workout?.id, workouts, exercises]);
+    isInitializedRef.current = true;
+  }, [workout, exercises]);
+
+  // Sincroniza imediatamente o descanso personalizado (e outros metadados) ao voltar da tela de configuração
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      if (!isInitializedRef.current) return;
+      (async () => {
+        const latest = await workoutService.getById(workoutId);
+        if (!latest || !isMounted) return;
+        setExecExercises((prev) =>
+          prev.map((e) => {
+            const planEx = latest.exercises.find((we) => we.exerciseId === e.exerciseId);
+            if (!planEx) return e;
+            return {
+              ...e,
+              restSeconds: planEx.restSeconds,
+              warmupSets: planWarmupSets(planEx),
+              preparationSets: planPreparationSets(planEx),
+              workingSets: planWorkingSets(planEx),
+              advancedTechnique: planEx.advancedTechnique,
+            };
+          }),
+        );
+      })();
+      return () => {
+        isMounted = false;
+      };
+    }, [workoutId]),
+  );
 
   const completedCount = execExercises.filter((e) => e.completed).length;
   const totalExercises = execExercises.length;
@@ -270,8 +300,11 @@ export default function ExerciseExecutionScreen() {
 
         const allDone = updated.every((s) => s.completed);
 
-        // Dispara o modal de contagem de descanso ao concluir a série
-        const duration = e.restSeconds ?? settings.defaultRestSeconds ?? 60;
+        // Dispara o modal de contagem de descanso ao concluir a série:
+        // Prioridade: descanso personalizado do exercício (ex: 20s) > padrão global (ex: 90s)
+        const duration = (e.restSeconds != null && e.restSeconds > 0)
+          ? e.restSeconds
+          : (settings.defaultRestSeconds || 90);
         triggeredRest = {
           exerciseId: e.exerciseId,
           exerciseName: e.exerciseName,

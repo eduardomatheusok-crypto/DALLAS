@@ -16,7 +16,8 @@ public record WorkoutExercisePlanDto(
         Integer warmupSets,
         Integer preparationSets,
         Integer workingSets,
-        Map<String, Object> advancedTechnique
+        Map<String, Object> advancedTechnique,
+        Integer restSeconds
 ) {
     public static WorkoutExercisePlanDto from(WorkoutExercisePlanEntity e) {
         return new WorkoutExercisePlanDto(
@@ -29,7 +30,8 @@ public record WorkoutExercisePlanDto(
                 e.getWarmupSets(),
                 e.getPreparationSets(),
                 e.getWorkingSets(),
-                WorkoutService.parseTechnique(e.getAdvancedTechnique())
+                WorkoutService.parseTechnique(e.getAdvancedTechnique()),
+                e.getRestSeconds()
         );
     }
 }

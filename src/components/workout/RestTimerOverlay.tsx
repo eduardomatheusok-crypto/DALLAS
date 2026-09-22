@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { Icon } from '../../theme/icons';
 import ProgressBar from '../common/ProgressBar';
@@ -58,10 +58,22 @@ export default function RestTimerOverlay({
         </Pressable>
       </View>
 
-      <Text style={styles.countdown}>{formatCountdown(remainingMs)}</Text>
-      <Text style={styles.subtitle} numberOfLines={2}>
-        {subtitle}
-      </Text>
+      <View style={styles.countdownRow}>
+        <View style={styles.countdownTextWrap}>
+          <Text style={styles.countdown}>{formatCountdown(remainingMs)}</Text>
+          <Text style={styles.subtitle} numberOfLines={2}>
+            {subtitle}
+          </Text>
+        </View>
+        <View style={styles.mascotBadge}>
+          <Image
+            source={require('../../../assets/dallas/dallas_cansado.png')}
+            style={styles.mascotThumb}
+            resizeMode="contain"
+          />
+          <Text style={styles.mascotSpeech}>Respira!</Text>
+        </View>
+      </View>
 
       <View style={styles.progressWrap}>
         <ProgressBar progress={progress} />
@@ -117,8 +129,16 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textTransform: 'uppercase',
   },
+  countdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  countdownTextWrap: {
+    flex: 1,
+  },
   countdown: {
-    fontSize: 52,
+    fontSize: 48,
     fontWeight: '800',
     color: colors.text,
     letterSpacing: -1.5,
@@ -128,6 +148,23 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  mascotBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: spacing.md,
+  },
+  mascotThumb: {
+    width: 62,
+    height: 62,
+  },
+  mascotSpeech: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.primaryLight,
+    textTransform: 'uppercase',
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
   progressWrap: {
     marginTop: spacing.md,

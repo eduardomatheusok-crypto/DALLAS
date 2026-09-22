@@ -13,6 +13,7 @@ function workoutExercisePlanToDto(e: WorkoutExercisePlan) {
     preparationSets: e.preparationSets,
     workingSets: e.workingSets,
     advancedTechnique: e.advancedTechnique,
+    restSeconds: e.restSeconds,
   };
 }
 

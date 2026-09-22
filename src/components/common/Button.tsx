@@ -106,13 +106,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   autoWidth: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
   },
   compact: {
     paddingVertical: 12,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
   },
   text: {
     ...typography.button,

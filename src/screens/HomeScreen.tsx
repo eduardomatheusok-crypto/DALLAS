@@ -14,6 +14,7 @@ import { colors, spacing, borderRadius, typography, shadows } from '../theme';
 import { Icon, type AppIconName } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
 import { formatDate, formatDuration, workoutLogService } from '../services';
+import DallasMascotCard from '../components/mascot/DallasMascotCard';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -51,6 +52,25 @@ export default function HomeScreen() {
   const recent = logs.slice(0, 3);
   const evolution = useMemo(() => buildEvolution(logs), [logs]);
 
+  const hasTrainedToday = useMemo(() => {
+    if (logs.length === 0) return false;
+    const lastLogDate = new Date(logs[0].startedAt);
+    const today = new Date();
+    return (
+      lastLogDate.getDate() === today.getDate() &&
+      lastLogDate.getMonth() === today.getMonth() &&
+      lastLogDate.getFullYear() === today.getFullYear()
+    );
+  }, [logs]);
+
+  const daysSinceLastWorkout = useMemo(() => {
+    if (logs.length === 0) return 999;
+    const lastLogDate = new Date(logs[0].startedAt).getTime();
+    const now = Date.now();
+    const diffDays = Math.floor((now - lastLogDate) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  }, [logs]);
+
   return (
     <ScrollView
       style={styles.container}
@@ -62,6 +82,12 @@ export default function HomeScreen() {
       ) : (
         <>
           <Header firstName={firstName} greeting={greeting} streak={streak} />
+
+          <DallasMascotCard
+            streak={streak}
+            hasTrainedToday={hasTrainedToday}
+            daysSinceLastWorkout={daysSinceLastWorkout}
+          />
 
           {todayWorkout ? (
             <TodayWorkout
@@ -478,6 +504,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
     gap: spacing.sm,
     backgroundColor: colors.primary,
     borderRadius: borderRadius.md,

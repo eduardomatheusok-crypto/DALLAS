@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,12 +63,16 @@ export default function WorkoutCompleteScreen() {
         <Animated.View
           style={[styles.badge, { opacity: badgeOpacity, transform: [{ scale: badgeScale }] }]}
         >
-          <Icon name="checkmarkDone" size="xl" color={colors.primary} />
+          <Image
+            source={require('../../assets/dallas/dallas_feliz.png')}
+            style={styles.mascotCelebration}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         <Animated.View style={[styles.heading, { opacity: contentOpacity }]}>
           <Text style={[typography.title, styles.title]}>Treino concluído!</Text>
-          <Text style={[typography.bodySecondary, styles.message]}>Excelente trabalho! 🔥</Text>
+          <Text style={[typography.bodySecondary, styles.message]}>Dallas aprovou seu treino de hoje! 🔥</Text>
         </Animated.View>
 
         <Animated.View style={[styles.summary, { opacity: contentOpacity }]}>
@@ -115,16 +119,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   badge: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: 'rgba(229, 9, 20, 0.35)',
+    borderWidth: 2,
+    borderColor: 'rgba(229, 9, 20, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
+    overflow: 'hidden',
     ...shadows.glow,
+  },
+  mascotCelebration: {
+    width: 104,
+    height: 104,
   },
   heading: {
     alignItems: 'center',

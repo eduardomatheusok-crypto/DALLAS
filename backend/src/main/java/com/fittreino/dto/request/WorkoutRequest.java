@@ -20,6 +20,7 @@ public record WorkoutRequest(
             Integer warmupSets,
             Integer preparationSets,
             Integer workingSets,
-            Map<String, Object> advancedTechnique
+            Map<String, Object> advancedTechnique,
+            Integer restSeconds
     ) {}
 }
