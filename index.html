@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Eduardo Matheus - Cover Letter & Evidence Dossier</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    @page {
+      size: A4 portrait;
+      margin: 0; /* Remove cabeçalhos e rodapés automáticos do navegador */
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      line-height: 1.42;
+      background-color: #f1f5f9;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      margin: 15px auto;
+      background: #ffffff;
+      padding: 16mm 18mm 14mm 18mm;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @media print {
+      body { background: transparent; }
+      .page {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 15mm 18mm 14mm 18mm;
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+      }
+    }
+
+    /* Cabeçalho */
+    .header-top {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .dossier-tag {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .candidate-name {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      margin: 2px 0;
+    }
+    .candidate-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #2563eb;
+      margin-bottom: 6px;
+    }
+    .contact-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 11px;
+      color: #334155;
+    }
+    .contact-row a {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Metadata Bar */
+    .metadata-bar {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1.6fr;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      font-size: 10.5px;
+    }
+    .meta-item strong {
+      display: block;
+      color: #0f172a;
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    /* Seções */
+    h2.section-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #0f172a;
+      border-left: 4px solid #2563eb;
+      padding-left: 8px;
+      margin: 12px 0 8px 0;
+    }
+    p {
+      font-size: 11px;
+      color: #334155;
+      margin-bottom: 8px;
+      text-align: justify;
+    }
+
+    /* Callout KPI */
+    .kpi-callout {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid #2563eb;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .kpi-number {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1d4ed8;
+      white-space: nowrap;
+    }
+    .kpi-text {
+      font-size: 10.5px;
+      color: #1e3a8a;
+      line-height: 1.35;
+    }
+
+    /* Tabelas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 12px 0;
+      font-size: 10.5px;
+    }
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 600;
+      text-align: left;
+      padding: 6px 9px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 7px 9px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+      color: #334155;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-high { background: #dcfce7; color: #15803d; }
+    .badge-ref { background: #e0e7ff; color: #3730a3; }
+
+    /* Diferenciais Grid */
+    .strengths-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .strength-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 10.5px;
+    }
+    .strength-card strong {
+      display: block;
+      color: #0f172a;
+      margin-bottom: 3px;
+      font-size: 11px;
+    }
+
+    /* Rodapé Limpo */
+    .page-footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 6px;
+      font-size: 9px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1 ==================== -->
+  <div class="page">
+    <div class="header-top">
+      <div class="dossier-tag">Dossiê de Apresentação Executiva & Evidências de Engenharia</div>
+      <div class="candidate-name">EDUARDO MATHEUS</div>
+      <div class="candidate-title">Desenvolvedor Backend (Java & Spring Boot) | Full Stack | APIs REST | PostgreSQL</div>
+      <div class="contact-row">
+        <span>Recife - PE, Brasil</span>
+        <span><a href="mailto:eduardomatheusok@gmail.com">eduardomatheusok@gmail.com</a></span>
+        <span>LinkedIn: <a href="https://www.linkedin.com/in/eduardo-matheus-b608673b9" target="_blank">linkedin.com/in/eduardo-matheus-b608673b9</a></span>
+        <span>GitHub: <a href="https://github.com/eduardomatheusok-crypto" target="_blank">github.com/eduardomatheusok-crypto</a></span>
+      </div>
+    </div>
+
+    <div class="metadata-bar">
+      <div class="meta-item">
+        <strong>Foco Técnico</strong>
+        Backend Java / Spring Boot & Sistemas Comerciais
+      </div>
+      <div class="meta-item">
+        <strong>Formação</strong>
+        Análise e Desenvolvimento de Sistemas (ADS)
+      </div>
+      <div class="meta-item">
+        <strong>Stack Principal</strong>
+        Java 17/21, Spring Boot 3, REST APIs, PostgreSQL, Angular, React, Docker, JWT
+      </div>
+    </div>
+
+    <h2 class="section-title">1. Carta de Apresentação Executiva</h2>
+    
+    <p>Prezada Equipe de Recrutamento e Líderes de Engenharia de Software,</p>
+
+    <p>Sou estudante de Análise e Desenvolvimento de Sistemas e desenvolvedor de software, com sólida atuação prática no desenvolvimento backend utilizando Java e Spring Boot, além de experiência em desenvolvimento Full Stack, arquitetura de APIs RESTful e modelagem de bancos de dados relacionais (PostgreSQL).</p>
+
+    <p>Diferente de uma trajetória estritamente acadêmica ou fundamentada apenas em exercícios teóricos, minha experiência técnica foi construída diretamente na resolução de problemas reais de negócios. Atuo no ciclo completo de desenvolvimento (<em>Full-Cycle Engineering</em>): desde a imersão com o cliente para levantamento e análise de requisitos, desenho da arquitetura e modelagem relacional de dados (DER), até a implementação das APIs, regras de negócio em camadas, integração com front-end reativo, testes e disponibilização da aplicação em ambientes de produção contínua.</p>
+
+    <p>Entre os principais projetos que evidenciam minha capacidade de entrega, destaco o desenvolvimento de um <strong>Sistema de Gestão Comercial e Comanda Eletrônica para Restaurante</strong>, construído com Java, Spring Boot, REST APIs e PostgreSQL. A aplicação atua no fluxo operacional crítico do estabelecimento, permitindo que os garçons lancem pedidos em tempo real via celular, integrando a comunicação direta com a cozinha/bar e centralizando o fechamento de contas. O sistema contempla ainda controle de estoque de insumos, gestão de acessos, registro de pagamentos e relatórios analíticos de vendas.</p>
+
+    <div class="kpi-callout">
+      <div class="kpi-number">-85% TEMPO</div>
+      <div class="kpi-text">
+        <strong>Impacto Comprovado em Produção:</strong> O processo de conferência e fechamento de caixa, que anteriormente consumia entre 3 e 4 horas manuais dos gestores, passou a ser concluído com segurança em aproximadamente 30 a 40 minutos diários.
+      </div>
+    </div>
+
+    <p>Paralelamente, desenvolvi um <strong>ERP de Gestão para Padaria</strong>, projetado com Java, Spring Boot, REST APIs, PostgreSQL, Angular e TypeScript. O sistema digitalizou processos manuais e controles descentralizados de estoque, vendas de balcão, movimentações financeiras e indicadores de faturamento em tempo real, conferindo confiabilidade gerencial à operação.</p>
+
+    <p>Em paralelo às aplicações voltadas a negócios reais, mantenho uma rotina contínua de aprofundamento técnico em projetos de alta complexidade arquitetural, incluindo o <strong>Job Application Tracker</strong> (autenticação JWT, migrações com Flyway e integração direta com a Google Gmail API) e uma <strong>Plataforma de Gestão Fitness</strong> modular com React e TypeScript.</p>
+
+    <p>Adicionalmente, integro ferramentas de Inteligência Artificial Generativa como parte ativa do meu fluxo diário de desenvolvimento para acelerar produtividade, investigar arquiteturas alternativas, simular cenários de teste (<em>edge cases</em>) e refatorar código, mantendo sempre o rigor crítico e a responsabilidade técnica de validação.</p>
+
+    <p>Busco uma oportunidade onde possa integrar essa vivência prática de entrega, responsabilidade técnica e capacidade rápida de aprendizado a uma equipe de desenvolvimento estruturada. Agradeço pela consideração e permaneço à total disposição.</p>
+
+    <p style="margin-top: 10px;"><strong>Eduardo Matheus</strong><br><span style="font-size: 10.5px; color: #64748b;">Recife - PE, Brasil</span></p>
+
+    <div class="page-footer">
+      <span>Eduardo Matheus | Dossiê de Evidências de Engenharia</span>
+      <span>Página 1</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 2 ==================== -->
+  <div class="page">
+    <div class="header-top">
+      <div class="dossier-tag">Portfólio de Evidências Documentadas</div>
+      <div class="candidate-name" style="font-size: 19px;">DOSSIÊ DE PROJETOS E RESULTADOS DE NEGÓCIO</div>
+    </div>
+
+    <h2 class="section-title">2. Dossiê de Projetos & Evidências Reais</h2>
+    <p>Sistemas desenvolvidos, tecnologias empregadas e o retorno tangível obtido em cenários reais:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 8%;">Ref</th>
+          <th style="width: 23%;">Projeto / Sistema</th>
+          <th style="width: 25%;">Stack Tecnológica</th>
+          <th style="width: 32%;">Impacto & Resultados de Negócio</th>
+          <th style="width: 12%;">Validação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-ref">E1</span></td>
+          <td><strong>Sistema de Comanda & Gestão de Restaurante</strong></td>
+          <td>Java 17, Spring Boot 3, REST APIs, PostgreSQL</td>
+          <td>Redução drástica do fechamento de caixa de ~3-4h para 30-40 min (~85% de eficiência). Pedidos no salão integrados à cozinha e controle unificado de mesas.</td>
+          <td><span class="badge badge-high">Produção</span></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-ref">E2</span></td>
+          <td><strong>ERP Comercial & Caixa (Padaria)</strong></td>
+          <td>Java, Spring Boot, PostgreSQL, Angular, TypeScript</td>
+          <td>Digitalização integral de estoque, frente de caixa (PDV) e relatórios financeiros, substituindo controles manuais por monitoramento em tempo real.</td>
+          <td><span class="badge badge-high">Produção</span></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-ref">E3</span></td>
+          <td><strong>Job Application Tracker</strong></td>
+          <td>Java, Spring Boot, React, PostgreSQL, JWT, Flyway, Gmail API</td>
+          <td>Autenticação stateless robusta com JWT, versionamento de schema com Flyway e sincronização automática via integração com API externa do Google Gmail.</td>
+          <td><span class="badge badge-high">Repositório</span></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-ref">E4</span></td>
+          <td><strong>Plataforma de Gestão Fitness</strong></td>
+          <td>React, TypeScript, Componentes Modulares</td>
+          <td>Interface reativa e modular orientada à experiência do usuário para gerenciamento de alunos, fichas dinâmicas e evolução de treinos.</td>
+          <td><span class="badge badge-high">Repositório</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="section-title">Diferenciais Relevantes para Recrutadores</h2>
+    <div class="strengths-grid">
+      <div class="strength-card">
+        <strong>Visão Full-Cycle de Software</strong>
+        Capacidade de atuar desde o entendimento do problema de negócio e desenho do DER até a implementação de endpoints REST, regras de negócio e deploy.
+      </div>
+      <div class="strength-card">
+        <strong>Orientação Pragmática a Resultados</strong>
+        Foco constante em entregar valor real: redução de tempo de processos, precisão de dados e sistemas funcionais para usuários leigos.
+      </div>
+      <div class="strength-card">
+        <strong>Arquitetura e Boas Práticas</strong>
+        Estruturação de software em camadas bem definidas, desacoplamento com DTOs, tratamento global de exceções e persistência consistente com JPA/Hibernate.
+      </div>
+      <div class="strength-card">
+        <strong>Fluxo Acelerado com IA Responsável</strong>
+        Uso disciplinado de Inteligência Artificial para aumentar velocidade de entrega e qualidade de testes com compreensão plena do código.
+      </div>
+    </div>
+
+    <h2 class="section-title">Famílias de Posições com Enquadramento Imediato</h2>
+    <p>• <strong>Desenvolvedor Backend Júnior (Java / Spring Boot):</strong> Atuação direta na criação e sustentação de APIs RESTful, regras de negócio e modelagem de dados.<br>
+       • <strong>Desenvolvedor Full Stack Júnior:</strong> Integração fluida entre backend Java e aplicações frontend em Angular ou React.<br>
+       • <strong>Estágio em Engenharia de Software:</strong> Perfil com base técnica comprovada e curva de aprendizado acelerada.</p>
+
+    <div class="page-footer">
+      <span>Eduardo Matheus | Dossiê de Evidências de Engenharia</span>
+      <span>Página 2</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 3 ==================== -->
+  <div class="page">
+    <div class="header-top">
+      <div class="dossier-tag">Competências Técnicas & Metodologia</div>
+      <div class="candidate-name" style="font-size: 19px;">MATRIZ DE COMPETÊNCIAS & FLUXO DE ENGENHARIA</div>
+    </div>
+
+    <h2 class="section-title">3. Matriz de Competências Técnicas Baseada em Evidências</h2>
+    <p>Mapeamento entre domínios tecnológicos e as capacidades comprovadas nas aplicações entregues:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Domínio Técnico</th>
+          <th style="width: 57%;">Capacidade Comprovada em Projetos</th>
+          <th style="width: 18%;">Base de Evidência</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Backend & APIs REST</strong></td>
+          <td>Desenvolvimento de APIs robustas com Java 17/21 e Spring Boot (Spring Data JPA, Spring Security, validação de beans, DTO pattern e tratamento centralizado de erros).</td>
+          <td>Projetos E1, E2 e E3</td>
+        </tr>
+        <tr>
+          <td><strong>Bancos Relacionais</strong></td>
+          <td>Modelagem relacional (DER), normalização, integridade referencial, consultas SQL otimizadas com PostgreSQL e migrações versionadas via Flyway.</td>
+          <td>Projetos E1, E2 e E3</td>
+        </tr>
+        <tr>
+          <td><strong>Frontend & Integração</strong></td>
+          <td>Criação de SPAs dinâmicas e responsivas com Angular e React, tipagem estrita com TypeScript, gerenciamento de estado e consumo de APIs assíncronas.</td>
+          <td>Projetos E2, E3 e E4</td>
+        </tr>
+        <tr>
+          <td><strong>Segurança & Autenticação</strong></td>
+          <td>Autenticação stateless via JSON Web Tokens (JWT), controle de rotas por perfis de acesso e criptografia de credenciais.</td>
+          <td>Projeto E3</td>
+        </tr>
+        <tr>
+          <td><strong>DevOps & Ferramental</strong></td>
+          <td>Controle de versão semântico com Git/GitHub, empacotamento com Docker, testes de endpoints via Postman e ambiente Linux.</td>
+          <td>E1, E2, E3, E4</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="section-title">4. Metodologia de Desenvolvimento com Inteligência Artificial</h2>
+    <p>Minha abordagem em relação a ferramentas de IA generativa é centrada em produtividade e rigor técnico:</p>
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-size: 10.5px; color: #334155; line-height: 1.45;">
+      • <strong>Geração Acelerada de Testes:</strong> Simulação de casos de borda (<em>edge cases</em>), dados sintéticos para validação de carga e cenários de exceção.<br>
+      • <strong>Investigação Arquitetural:</strong> Comparação rápida entre padrões de design e abordagens de implementação antes da tomada de decisão.<br>
+      • <strong>Revisão Crítica Contínua:</strong> Toda sugestão gerada por IA é inspecionada, refatorada e validada manualmente para assegurar padrões de código limpo, segurança e manutenibilidade.
+    </div>
+
+    <h2 class="section-title">Contatos e Repositórios Oficiais</h2>
+    <p>Para inspeção de código-fonte, arquitetura dos projetos ou contato direto:</p>
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 12px; font-size: 11px; color: #1e3a8a; line-height: 1.5;">
+      • <strong>LinkedIn Oficial:</strong> <a href="https://www.linkedin.com/in/eduardo-matheus-b608673b9" target="_blank" style="color: #2563eb; font-weight: 700;">https://www.linkedin.com/in/eduardo-matheus-b608673b9</a><br>
+      • <strong>GitHub Oficial:</strong> <a href="https://github.com/eduardomatheusok-crypto" target="_blank" style="color: #2563eb; font-weight: 700;">https://github.com/eduardomatheusok-crypto</a><br>
+      • <strong>E-mail Direto:</strong> <a href="mailto:eduardomatheusok@gmail.com" style="color: #2563eb; font-weight: 700;">eduardomatheusok@gmail.com</a><br>
+      • <strong>Localização:</strong> Recife - PE, Brasil
+    </div>
+
+    <div class="page-footer">
+      <span>Eduardo Matheus | Dossiê de Evidências de Engenharia</span>
+      <span>Página 3</span>
+    </div>
+  </div>
+
+</body>
+</html>

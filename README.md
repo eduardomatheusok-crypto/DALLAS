@@ -18,6 +18,28 @@ O **DALLAS** é uma plataforma desenvolvida para praticantes de musculação e e
 
 ---
 
+## 📱 Telas do Aplicativo (Screenshots)
+
+<div align="center">
+
+### Onboarding e Visão Geral
+
+| Boas-vindas | Metas / Onboarding | Início & Dallas Mascot |
+| :---: | :---: | :---: |
+| <img src="imgs-git/img-apresentacao.jpeg" width="240" alt="Boas-vindas" /> | <img src="imgs-git/img-cadastro.jpeg" width="240" alt="Cadastro e Metas" /> | <img src="imgs-git/img-inicio.jpeg" width="240" alt="Início" /> |
+
+<br />
+
+### Execução de Treino & Evolução
+
+| Registro de Séries | Timer de Descanso | Treino Concluído | Gráficos de Evolução |
+| :---: | :---: | :---: | :---: |
+| <img src="imgs-git/img-treino.jpeg" width="200" alt="Execução do Treino" /> | <img src="imgs-git/img-timer.jpeg" width="200" alt="Timer de Descanso" /> | <img src="imgs-git/img-treino_concluido.jpeg" width="200" alt="Conclusão do Treino" /> | <img src="imgs-git/img-dashboar_exercicio.jpeg" width="200" alt="Dashboard de Evolução" /> |
+
+</div>
+
+---
+
 ## 🏗️ 2. Arquitetura do Sistema
 
 O projeto adota uma arquitetura desacoplada dividida em **Frontend Multiplataforma**, **Backend RESTful** e **Banco de Dados Relacional**:
@@ -92,6 +114,7 @@ app-treino/
 │   ├── storage/                   # Camada de abstração do AsyncStorage
 │   └── theme/                     # Tokens de cores, espaçamentos e suporte a temas
 │
+├── imgs-git/                      # Capturas de tela para demonstração visual
 ├── App.tsx                        # Ponto de entrada do React Native
 ├── app.json                       # Configurações do Expo e EAS Build
 ├── package.json                   # Dependências e scripts do frontend
