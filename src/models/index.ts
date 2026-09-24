@@ -22,8 +22,10 @@ export {
 export type {
   Exercise,
   MuscleGroup,
+  ExerciseEquipment,
+  ExerciseExecutionStep,
 } from './Exercise';
-export { MUSCLE_GROUPS } from './Exercise';
+export { MUSCLE_GROUPS, EXERCISE_EQUIPMENTS } from './Exercise';
 
 export type {
   Workout,

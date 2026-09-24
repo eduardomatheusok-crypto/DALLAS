@@ -5,6 +5,7 @@ import { colors, spacing, borderRadius, typography } from '../../theme';
 import { Icon } from '../../theme/icons';
 import type { Workout, Exercise } from '../../models';
 import { planTotalSets } from '../../models';
+import { findExerciseByIdOrName } from '../../services';
 
 interface Props {
   workout: Workout;
@@ -17,14 +18,14 @@ export default function WorkoutCard({ workout, exercises, onPress, onMenu }: Pro
   const ordered = [...workout.exercises].sort((a, b) => a.order - b.order);
 
   const names = ordered
-    .map((we) => exercises.find((e) => e.id === we.exerciseId)?.name ?? 'Exercício')
+    .map((we) => findExerciseByIdOrName(exercises, we.exerciseId)?.name ?? 'Exercício')
     .slice(0, 3)
     .join(' · ');
 
   const muscles = Array.from(
     new Set(
       ordered
-        .map((we) => exercises.find((e) => e.id === we.exerciseId)?.muscleGroup)
+        .map((we) => findExerciseByIdOrName(exercises, we.exerciseId)?.muscleGroup)
         .filter(Boolean) as string[],
     ),
   ).slice(0, 3);

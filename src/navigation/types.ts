@@ -4,6 +4,7 @@ export type RootStackParamList = {
   WorkoutForm: { workoutId?: string };
   WorkoutExerciseConfig: { workoutId: string; exerciseId: string };
   ExerciseExecution: { workoutId: string };
+  ActiveExerciseDetail: { workoutId: string; exerciseId: string; exerciseIndex?: number };
   WorkoutComplete: { durationSeconds: number; volume: number; series: number };
   Settings: undefined;
   LogDetail: { logId: string };

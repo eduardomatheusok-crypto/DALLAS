@@ -4,6 +4,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { Card, Button, LoadingState, EmptyState, Screen, Section, IconButton } from '../components/common';
 import { useWorkouts, useExercises } from '../hooks';
+import { findExerciseByIdOrName } from '../services';
 import { colors, spacing, borderRadius, typography, SET_CATEGORY_THEME } from '../theme';
 import { Icon } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
@@ -94,7 +95,7 @@ export default function WorkoutDetailScreen() {
       <Section title="Exercícios">
         <View style={styles.exercises}>
           {orderedExercises.map((we, index) => {
-            const ex = exercises.find((e) => e.id === we.exerciseId);
+            const ex = findExerciseByIdOrName(exercises, we.exerciseId);
             return (
               <Pressable
                 key={we.exerciseId}

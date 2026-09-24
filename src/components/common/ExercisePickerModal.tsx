@@ -15,6 +15,7 @@ import type { Exercise, MuscleGroup } from '../../models';
 import { MUSCLE_GROUPS } from '../../models';
 import MuscleGroupPill from './MuscleGroupPill';
 import { Button } from './Button';
+import { ExerciseMediaViewer } from '../exercise';
 
 interface Props {
   visible: boolean;
@@ -119,9 +120,22 @@ export default function ExercisePickerModal({
                   onAdd(item);
                 }}
               >
+                <ExerciseMediaViewer
+                  startImage={item.startImage}
+                  endImage={item.endImage}
+                  mode="thumbnail"
+                  style={styles.itemThumb}
+                />
                 <View style={styles.rowText}>
                   <Text style={typography.body}>{item.name}</Text>
-                  <Text style={typography.small}>{item.muscleGroup}</Text>
+                  <View style={styles.itemMeta}>
+                    <Text style={typography.small}>{item.muscleGroup}</Text>
+                    {item.equipment && (
+                      <View style={styles.equipTag}>
+                        <Text style={styles.equipTagText}>{item.equipment}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
                 <View style={styles.addIconWrap}>
                   <Icon name="plus" size="sm" color={colors.white} />
@@ -237,15 +251,37 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surfaceLight,
     borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  itemThumb: {
+    width: 44,
+    height: 44,
   },
   rowText: {
     flex: 1,
+    gap: 2,
+  },
+  itemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  equipTag: {
+    backgroundColor: 'rgba(229, 9, 20, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: borderRadius.sm,
+  },
+  equipTagText: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primaryLight,
   },
   plus: {
     fontSize: 24,

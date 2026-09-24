@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   FlatList,
   Modal,
@@ -17,20 +17,41 @@ import {
   Button,
   Screen,
 } from '../components/common';
-import { MUSCLE_GROUPS, type MuscleGroup } from '../models';
+import {
+  MUSCLE_GROUPS,
+  EXERCISE_EQUIPMENTS,
+  type MuscleGroup,
+  type ExerciseEquipment,
+  type Exercise,
+} from '../models';
 import { exerciseService } from '../services';
 import { colors, spacing, borderRadius, typography } from '../theme';
 import { Icon } from '../theme/icons';
+import { ExerciseMediaViewer, ExerciseDetailModal } from '../components/exercise';
 
 export default function ExercisesScreen() {
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<MuscleGroup | undefined>(undefined);
+  const [equipment, setEquipment] = useState<ExerciseEquipment | undefined>(undefined);
   const [createVisible, setCreateVisible] = useState(false);
+  const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
+
   const { exercises, loading, reload } = useExercises(query, group);
+
+  // Filtra por equipamento em memória sobre o resultado já filtrado por grupo/busca
+  const filteredExercises = useMemo(() => {
+    if (!equipment) return exercises;
+    return exercises.filter((e) => e.equipment === equipment);
+  }, [exercises, equipment]);
 
   const groups: { group: MuscleGroup | 'Todos' }[] = [
     { group: 'Todos' },
     ...MUSCLE_GROUPS.map((g) => ({ group: g })),
+  ];
+
+  const equipments: { equip: ExerciseEquipment | 'Todos' }[] = [
+    { equip: 'Todos' },
+    ...EXERCISE_EQUIPMENTS.map((eq) => ({ equip: eq })),
   ];
 
   return (
@@ -61,9 +82,15 @@ export default function ExercisesScreen() {
           value={query}
           onChangeText={setQuery}
         />
+        {query.length > 0 && (
+          <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Icon name="close" size="xs" color={colors.textMuted} />
+          </Pressable>
+        )}
       </View>
 
-      <View>
+      {/* Filtro de Grupos Musculares */}
+      <View style={styles.filterSection}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -79,38 +106,95 @@ export default function ExercisesScreen() {
         />
       </View>
 
+      {/* Filtro secundário por Equipamento */}
+      <View style={styles.equipFilterSection}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={equipments}
+          keyExtractor={(item) => item.equip}
+          renderItem={({ item }) => {
+            const isActive =
+              equipment === item.equip || (item.equip === 'Todos' && equipment === undefined);
+            return (
+              <Pressable
+                onPress={() => setEquipment(item.equip === 'Todos' ? undefined : item.equip)}
+                style={[styles.equipPill, isActive && styles.equipPillActive]}
+              >
+                <Text style={[styles.equipPillText, isActive && styles.equipPillTextActive]}>
+                  {item.equip}
+                </Text>
+              </Pressable>
+            );
+          }}
+        />
+      </View>
+
       {loading ? (
         <LoadingState />
       ) : (
         <FlatList
-          data={exercises}
+          data={filteredExercises}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <EmptyState
               icon="muscle"
               title="Nenhum exercício"
-              message="Crie um exercício personalizado ou ajuste a busca."
+              message="Ajuste os filtros ou cadastre um novo exercício personalizado."
             />
           }
           renderItem={({ item }) => (
-            <Card style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.info}>
-                  <Text style={typography.body}>{item.name}</Text>
-                  <Text style={typography.small}>{item.muscleGroup}</Text>
-                </View>
-                {item.isCustom ? (
-                  <View style={styles.badge}>
-                    <Icon name="checkmark-done" size="xs" color={colors.primaryLight} />
-                    <Text style={styles.badgeText}>personalizado</Text>
+            <Pressable onPress={() => setDetailExercise(item)}>
+              <Card style={styles.card}>
+                <View style={styles.cardRow}>
+                  {/* Thumbnail com foto do exercício */}
+                  <ExerciseMediaViewer
+                    startImage={item.startImage}
+                    endImage={item.endImage}
+                    mode="thumbnail"
+                  />
+
+                  {/* Informações */}
+                  <View style={styles.info}>
+                    <Text style={[typography.body, styles.exerciseName]} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+
+                    <View style={styles.tagsRow}>
+                      <Text style={styles.muscleLabel}>{item.muscleGroup}</Text>
+
+                      {item.equipment && (
+                        <View style={styles.equipBadge}>
+                          <Text style={styles.equipBadgeText}>{item.equipment}</Text>
+                        </View>
+                      )}
+
+                      {item.isCustom && (
+                        <View style={styles.customBadge}>
+                          <Text style={styles.customBadgeText}>personalizado</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
-                ) : null}
-              </View>
-            </Card>
+
+                  {/* Seta indicando detalhes */}
+                  <View style={styles.arrowWrap}>
+                    <Icon name="chevron-forward" size="sm" color={colors.textMuted} />
+                  </View>
+                </View>
+              </Card>
+            </Pressable>
           )}
         />
       )}
+
+      {/* Modal com detalhes completos do exercício */}
+      <ExerciseDetailModal
+        exercise={detailExercise}
+        visible={!!detailExercise}
+        onClose={() => setDetailExercise(null)}
+      />
 
       <CreateExerciseModal
         visible={createVisible}
@@ -135,15 +219,24 @@ function CreateExerciseModal({
 }) {
   const [name, setName] = useState('');
   const [group, setGroup] = useState<MuscleGroup>('Peito');
+  const [equipment, setEquipment] = useState<ExerciseEquipment>('Halteres');
+  const [tip, setTip] = useState('');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    await exerciseService.createCustom(name.trim(), group);
+    await exerciseService.createCustom(
+      name.trim(),
+      group,
+      equipment,
+      tip.trim() || undefined
+    );
     setSaving(false);
     setName('');
+    setTip('');
     setGroup('Peito');
+    setEquipment('Halteres');
     await onCreated();
   };
 
@@ -160,10 +253,19 @@ function CreateExerciseModal({
 
           <TextInput
             style={styles.input}
-            placeholder="Nome do exercício"
+            placeholder="Nome do exercício (ex: Supino com pegada fechada)"
             placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
+          />
+
+          <TextInput
+            style={[styles.input, styles.tipInput]}
+            placeholder="Dica de postura / execução (opcional)"
+            placeholderTextColor={colors.textMuted}
+            value={tip}
+            onChangeText={setTip}
+            multiline
           />
 
           <Text style={styles.groupLabel}>Grupo muscular</Text>
@@ -179,6 +281,34 @@ function CreateExerciseModal({
                   active={group === item}
                   onPress={() => setGroup(item)}
                 />
+              )}
+            />
+          </View>
+
+          <Text style={styles.groupLabel}>Equipamento</Text>
+          <View style={styles.groupWrap}>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={EXERCISE_EQUIPMENTS}
+              keyExtractor={(eq) => eq}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => setEquipment(item)}
+                  style={[
+                    styles.equipPill,
+                    equipment === item && styles.equipPillActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.equipPillText,
+                      equipment === item && styles.equipPillTextActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </Pressable>
               )}
             />
           </View>
@@ -251,34 +381,95 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     color: colors.text,
   },
+  filterSection: {
+    marginBottom: spacing.xs,
+  },
+  equipFilterSection: {
+    marginBottom: spacing.xs,
+  },
+  equipPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceLight,
+    marginRight: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  equipPillActive: {
+    backgroundColor: 'rgba(229, 9, 20, 0.2)',
+    borderColor: colors.primary,
+  },
+  equipPillText: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  equipPillTextActive: {
+    color: colors.white,
+    fontWeight: '700',
+  },
   list: {
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xxxl,
   },
   card: {
-    padding: spacing.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  row: {
+  cardRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.md,
   },
   info: {
-    gap: spacing.xs,
+    flex: 1,
+    gap: 4,
   },
-  badge: {
+  exerciseName: {
+    fontWeight: '600',
+    color: colors.text,
+  },
+  tagsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.scrim,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.full,
+    flexWrap: 'wrap',
+    gap: 6,
   },
-  badgeText: {
+  muscleLabel: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  equipBadge: {
+    backgroundColor: 'rgba(229, 9, 20, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(229, 9, 20, 0.3)',
+  },
+  equipBadgeText: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
     color: colors.primaryLight,
+  },
+  customBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: borderRadius.sm,
+  },
+  customBadgeText: {
+    ...typography.caption,
     fontSize: 10,
     fontWeight: '600',
+    color: colors.successLight,
+  },
+  arrowWrap: {
+    paddingLeft: spacing.xs,
   },
   modalOverlay: {
     flex: 1,
@@ -310,7 +501,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: spacing.md,
     color: colors.text,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
+  },
+  tipInput: {
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   groupLabel: {
     ...typography.label,
@@ -318,12 +513,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   groupWrap: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   modalActions: {
     flexDirection: 'row',
     gap: spacing.md,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   flexButton: {
     flex: 1,

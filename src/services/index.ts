@@ -2,7 +2,7 @@ export { userService } from './UserService';
 export { trainingPreferencesService } from './TrainingPreferencesService';
 export { trainingSettingsService } from './TrainingSettingsService';
 export { RestTimer, type RestTimerState, type RestTimerReason } from './RestTimer';
-export { exerciseService } from './ExerciseService';
+export { exerciseService, findExerciseByIdOrName, resolveCanonicalName } from './ExerciseService';
 export { workoutService } from './WorkoutService';
 export { workoutLogService, buildLog, computeStreakFromLogs, formatDuration, formatDate, formatTime } from './WorkoutLogService';
 export { groupService } from './GroupService';
@@ -10,3 +10,4 @@ export { competitionService, competitiveStatusLabel } from './CompetitionService
 export { chatService } from './ChatService';
 export { playTimerEndSound } from './soundService';
 export { refreshApiStatus, isApiOnline, onApiStatusChange } from '../api';
+export { workoutSessionService, type ExecutionExercise, type RestTriggerEvent, type WorkoutSessionSnapshot } from './WorkoutSessionService';

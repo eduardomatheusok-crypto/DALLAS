@@ -14,7 +14,7 @@ import {
 } from '../components/common';
 import Screen from '../components/common/Screen';
 import { useWorkouts, useExercises, useTrainingSettings } from '../hooks';
-import { workoutService } from '../services';
+import { workoutService, findExerciseByIdOrName } from '../services';
 import { colors, spacing, borderRadius, typography, SET_CATEGORY_THEME } from '../theme';
 import { Icon } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
@@ -85,7 +85,7 @@ export default function WorkoutExerciseConfigScreen() {
     [workout, exerciseId],
   );
   const exercise = useMemo(
-    () => exercises.find((e) => e.id === exerciseId),
+    () => findExerciseByIdOrName(exercises, exerciseId),
     [exercises, exerciseId],
   );
 
