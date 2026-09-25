@@ -1,11 +1,17 @@
-import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { Card, Button, LoadingState, EmptyState, Screen, Section, IconButton } from '../components/common';
+import {
+  LoadingState,
+  EmptyState,
+  Screen,
+  MenuSheet,
+  ConfirmationModal,
+} from '../components/common';
 import { useWorkouts, useExercises } from '../hooks';
-import { findExerciseByIdOrName } from '../services';
-import { colors, spacing, borderRadius, typography, SET_CATEGORY_THEME } from '../theme';
+import { findExerciseByIdOrName, workoutService } from '../services';
+import { colors, spacing, borderRadius } from '../theme';
 import { Icon } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
 import {
@@ -28,8 +34,11 @@ export default function WorkoutDetailScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<Nav>();
   const { workoutId } = route.params;
-  const { workouts, loading } = useWorkouts();
+  const { workouts, loading, reload } = useWorkouts();
   const { exercises } = useExercises();
+
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [deleteVisible, setDeleteVisible] = useState(false);
 
   const workout = useMemo(
     () => workouts.find((w) => w.id === workoutId),
@@ -38,14 +47,14 @@ export default function WorkoutDetailScreen() {
 
   if (loading) {
     return (
-      <Screen>
+      <Screen style={styles.screen}>
         <LoadingState />
       </Screen>
     );
   }
   if (!workout) {
     return (
-      <Screen>
+      <Screen style={styles.screen}>
         <EmptyState icon="error" title="Treino não encontrado" />
       </Screen>
     );
@@ -53,311 +62,370 @@ export default function WorkoutDetailScreen() {
 
   const orderedExercises = [...workout.exercises].sort((a, b) => a.order - b.order);
   const totalSets = orderedExercises.reduce((acc, we) => acc + planTotalSets(we), 0);
+  const estimatedMin = Math.round(totalSets * 3.5);
+
+  const muscleList = Array.from(
+    new Set(
+      orderedExercises
+        .map((we) => findExerciseByIdOrName(exercises, we.exerciseId)?.muscleGroup)
+        .filter(Boolean) as string[],
+    ),
+  );
+
+  const confirmDelete = async () => {
+    setDeleteVisible(false);
+    await workoutService.deleteWorkout(workout.id);
+    navigation.goBack();
+  };
+
+  const duplicateWorkout = async () => {
+    setMenuVisible(false);
+    await workoutService.duplicateWorkout(workout.id);
+    await reload();
+  };
 
   return (
-    <Screen scroll>
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <Text style={[typography.overline, styles.heroOverline]}>Seu treino</Text>
-          <IconButton
-            name="pencil"
-            onPress={() => navigation.navigate('WorkoutForm', { workoutId: workout.id })}
-            color={colors.textSecondary}
-            bg="transparent"
-            border={colors.border}
-          />
-        </View>
-        <Text style={styles.heroTitle}>{workout.name}</Text>
-        <Text style={styles.heroMeta}>
-          {orderedExercises.length} exercícios · {totalSets} séries
+    <Screen scroll style={styles.screen}>
+      {/* Top Header */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          style={styles.backBtn}
+        >
+          <Icon name="chevronLeft" size="sm" color={colors.white} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Detalhes do treino</Text>
+        <Pressable
+          onPress={() => setMenuVisible(true)}
+          hitSlop={12}
+          style={styles.backBtn}
+        >
+          <Icon name="menuVertical" size="sm" color={colors.white} />
+        </Pressable>
+      </View>
+
+      {/* Workout Info Section */}
+      <View style={styles.heroSection}>
+        <Text style={styles.workoutTitle}>{workout.name}</Text>
+        <Text style={styles.workoutMeta}>
+          {orderedExercises.length} exercícios • {totalSets} séries • ~{estimatedMin} min
         </Text>
 
+        {/* Muscle Tags */}
+        {muscleList.length > 0 ? (
+          <View style={styles.muscleRow}>
+            {muscleList.map((m) => (
+              <View key={m} style={styles.muscleBadge}>
+                <Text style={styles.muscleBadgeText}>{m}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Big Red CTA */}
         <Pressable
           style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}
           onPress={() => navigation.navigate('ExerciseExecution', { workoutId: workout.id })}
         >
           <Icon name="play" size="sm" color={colors.white} />
-          <Text style={styles.startText}>Começar treino</Text>
+          <Text style={styles.startText}>Iniciar treino</Text>
         </Pressable>
       </View>
 
-      <Section title="Resumo">
-        <View style={styles.summaryRow}>
-          <SummaryBox label="Exercícios" value={`${orderedExercises.length}`} />
-          <SummaryBox label="Séries" value={`${totalSets}`} />
-          <SummaryBox
-            label="Reps ~"
-            value={`${orderedExercises[0]?.plannedReps ?? 0}`}
-          />
-        </View>
-      </Section>
+      {/* Exercises Section */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Exercícios</Text>
+      </View>
 
-      <Section title="Exercícios">
-        <View style={styles.exercises}>
-          {orderedExercises.map((we, index) => {
-            const ex = findExerciseByIdOrName(exercises, we.exerciseId);
-            return (
+      <View style={styles.exerciseList}>
+        {orderedExercises.map((we) => {
+          const ex = findExerciseByIdOrName(exercises, we.exerciseId);
+          const thumbUri = ex?.startImage || ex?.gifUrl;
+
+          return (
+            <Pressable
+              key={we.exerciseId}
+              style={({ pressed }) => [styles.exerciseCard, pressed && styles.pressed]}
+              onPress={() =>
+                navigation.navigate('WorkoutExerciseConfig', {
+                  workoutId: workout.id,
+                  exerciseId: we.exerciseId,
+                })
+              }
+            >
+              {/* Thumbnail */}
+              <View style={styles.exerciseThumb}>
+                {thumbUri ? (
+                  <Image source={{ uri: thumbUri }} style={styles.thumbImage} resizeMode="cover" />
+                ) : (
+                  <Icon name="dumbbell" size="sm" color="#FF1E27" />
+                )}
+              </View>
+
+              {/* Info */}
+              <View style={styles.exerciseInfo}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.exerciseName} numberOfLines={1}>
+                    {ex?.name ?? 'Exercício'}
+                  </Text>
+                  {we.advancedTechnique && we.advancedTechnique.kind !== 'none' ? (
+                    <View style={styles.techBadge}>
+                      <Text style={styles.techBadgeText}>
+                        {techniqueName(we.advancedTechnique.kind)}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                <SetSummary plan={we} />
+              </View>
+
+              {/* Action Menu / Configure */}
               <Pressable
-                key={we.exerciseId}
-                style={({ pressed }) => [styles.exerciseRow, pressed && styles.pressed]}
                 onPress={() =>
                   navigation.navigate('WorkoutExerciseConfig', {
                     workoutId: workout.id,
                     exerciseId: we.exerciseId,
                   })
                 }
+                hitSlop={12}
+                style={styles.moreBtn}
               >
-                <View style={styles.orderBadge}>
-                  <Text style={styles.orderText}>
-                    {String(index + 1).padStart(2, '0')}
-                  </Text>
-                </View>
-                <View style={styles.info}>
-                  <View style={styles.nameRow}>
-                    <Text style={[typography.body, styles.exerciseName]} numberOfLines={1}>
-                      {ex?.name ?? 'Exercício'}
-                    </Text>
-                    {we.advancedTechnique && we.advancedTechnique.kind !== 'none' ? (
-                      <View style={styles.techBadge}>
-                        <Text style={styles.techBadgeText}>
-                          {techniqueName(we.advancedTechnique.kind)}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <SetBreakdown plan={we} />
-                </View>
-                <Icon name="chevronRight" size="sm" color={colors.textMuted} />
+                <Icon name="menuVertical" size="xs" color={colors.textSecondary} />
               </Pressable>
-            );
-          })}
-        </View>
-      </Section>
-
-      <View style={styles.footer}>
-        <Button
-          title="Editar treino"
-          variant="secondary"
-          icon="pencil"
-          onPress={() => navigation.navigate('WorkoutForm', { workoutId: workout.id })}
-          style={styles.footerButton}
-        />
+            </Pressable>
+          );
+        })}
       </View>
+
+      {/* Menu Sheet */}
+      <MenuSheet
+        visible={menuVisible}
+        title="Ações do treino"
+        onClose={() => setMenuVisible(false)}
+        actions={[
+          {
+            label: 'Editar treino',
+            icon: 'pencil',
+            onPress: () => {
+              setMenuVisible(false);
+              navigation.navigate('WorkoutForm', { workoutId: workout.id });
+            },
+          },
+          {
+            label: 'Duplicar treino',
+            icon: 'duplicate',
+            onPress: duplicateWorkout,
+          },
+          {
+            label: 'Excluir treino',
+            icon: 'trash',
+            destructive: true,
+            onPress: () => {
+              setMenuVisible(false);
+              setDeleteVisible(true);
+            },
+          },
+        ]}
+      />
+
+      <ConfirmationModal
+        visible={deleteVisible}
+        title="Excluir treino?"
+        message="Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteVisible(false)}
+      />
     </Screen>
   );
 }
 
-function SetBreakdown({ plan }: { plan: WorkoutExercisePlan }) {
+function SetSummary({ plan }: { plan: WorkoutExercisePlan }) {
   const working = planWorkingSets(plan);
   const warmup = planWarmupSets(plan);
   const prep = planPreparationSets(plan);
   const isDefault = warmup === 0 && prep === 0;
 
-  return (
-    <View style={styles.breakdownRow}>
-      {isDefault ? (
-        <Text style={styles.breakdownDefault}>
-          {working} séries · {plan.plannedReps} reps
-          {plan.initialWeight ? ` · ${plan.initialWeight} kg` : ''}
-        </Text>
-      ) : (
-        <>
-          {warmup > 0 ? (
-            <BreakdownChip
-              label={`${warmup} aquec.`}
-              color={SET_CATEGORY_THEME.warmup.accent}
-            />
-          ) : null}
-          {prep > 0 ? (
-            <BreakdownChip
-              label={`${prep} prep.`}
-              color={SET_CATEGORY_THEME.preparation.accent}
-            />
-          ) : null}
-          <BreakdownChip
-            label={`${working} válidas`}
-            color={SET_CATEGORY_THEME.working.accent}
-          />
-        </>
-      )}
-    </View>
-  );
-}
+  if (isDefault) {
+    return (
+      <Text style={styles.exerciseMeta}>
+        {working} séries • {plan.plannedReps} reps
+        {plan.initialWeight ? ` • ${plan.initialWeight} kg` : ''}
+      </Text>
+    );
+  }
 
-function BreakdownChip({ label, color }: { label: string; color: string }) {
-  return (
-    <View style={[styles.breakdownChip, { borderColor: color }]}>
-      <View style={[styles.breakdownDot, { backgroundColor: color }]} />
-      <Text style={[styles.breakdownText, { color }]}>{label}</Text>
-    </View>
-  );
-}
+  const parts = [];
+  if (warmup > 0) parts.push(`${warmup} aquec.`);
+  if (prep > 0) parts.push(`${prep} prep.`);
+  parts.push(`${working} válidas`);
 
-function SummaryBox({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.summaryBox}>
-      <Text style={styles.summaryValue}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
+    <Text style={styles.exerciseMeta}>
+      {parts.join(' • ')} ({plan.plannedReps} reps)
+    </Text>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    marginBottom: spacing.xxl,
-    gap: spacing.sm,
+  screen: {
+    backgroundColor: '#0A0A0C',
+    paddingHorizontal: spacing.lg,
   },
-  heroTop: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: spacing.md,
   },
-  heroOverline: {
-    color: colors.textMuted,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#141416',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#242428',
   },
-  heroTitle: {
-    fontSize: 30,
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  heroSection: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  workoutTitle: {
+    fontSize: 28,
     fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
+    color: colors.white,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  heroMeta: {
+  workoutMeta: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
+    marginTop: 4,
+    marginBottom: spacing.md,
+  },
+  muscleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  muscleBadge: {
+    backgroundColor: '#18181B',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  muscleBadgeText: {
+    fontSize: 12,
+    color: '#D4D4D8',
+    fontWeight: '600',
   },
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: 15,
-    marginTop: spacing.sm,
+    backgroundColor: '#FF1E27',
+    borderRadius: 14,
+    paddingVertical: 16,
+    shadowColor: '#FF1E27',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   startText: {
     color: colors.white,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
-  summaryRow: {
+  pressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.99 }],
+  },
+  sectionHeader: {
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  exerciseList: {
+    gap: spacing.sm,
+    paddingBottom: 40,
+  },
+  exerciseCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#141416',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#242428',
+    padding: spacing.md,
     gap: spacing.md,
   },
-  summaryBox: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  summaryValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  exercises: {
-    gap: spacing.sm,
-  },
-  exerciseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  orderBadge: {
-    width: 36,
-    height: 36,
+  exerciseThumb: {
+    width: 48,
+    height: 48,
     borderRadius: 10,
-    backgroundColor: colors.elevated,
+    backgroundColor: '#1C1C20',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#2E2E34',
   },
-  orderText: {
-    color: colors.primary,
-    fontWeight: '800',
-    fontSize: 13,
+  thumbImage: {
+    width: '100%',
+    height: '100%',
   },
-  info: {
+  exerciseInfo: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 4,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   exerciseName: {
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.white,
   },
   techBadge: {
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.scrim,
-    paddingHorizontal: spacing.sm,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 30, 39, 0.15)',
+    paddingHorizontal: 6,
     paddingVertical: 2,
   },
   techBadgeText: {
-    color: colors.primary,
+    color: '#FF1E27',
     fontSize: 10,
     fontWeight: '700',
   },
-  breakdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  breakdownDefault: {
-    fontSize: 12,
+  exerciseMeta: {
+    fontSize: 13,
     color: colors.textSecondary,
+    fontWeight: '500',
   },
-  breakdownChip: {
-    flexDirection: 'row',
+  moreBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  breakdownDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  breakdownText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  footer: {
-    marginTop: spacing.lg,
-  },
-  footerButton: {
-    width: '100%',
+    justifyContent: 'center',
   },
 });

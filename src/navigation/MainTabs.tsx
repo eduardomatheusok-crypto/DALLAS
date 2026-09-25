@@ -104,31 +104,31 @@ export default function MainTabs() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#0E0E11',
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    elevation: 8,
+    borderTopColor: '#1E1E22',
+    elevation: 12,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   tabIcon: {
     marginTop: 4,
   },
   iconWrap: {
     width: 40,
-    height: 26,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
   },
   iconWrapActive: {
-    backgroundColor: colors.scrim,
+    backgroundColor: 'rgba(255, 30, 39, 0.1)',
   },
 });

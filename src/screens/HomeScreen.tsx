@@ -1,29 +1,97 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Card,
-  EmptyState,
   LoadingState,
-  Section,
-  IconButton,
 } from '../components/common';
-import { useUser, useWorkouts, useWorkoutLogs } from '../hooks';
-import { colors, spacing, borderRadius, typography, shadows } from '../theme';
-import { Icon, type AppIconName } from '../theme/icons';
+import { useUser, useWorkouts, useWorkoutLogs, useExercises } from '../hooks';
+import { colors, spacing, borderRadius, typography } from '../theme';
+import { Icon } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
-import { formatDate, formatDuration, workoutLogService } from '../services';
-import DallasMascotCard from '../components/mascot/DallasMascotCard';
+import { formatDate, formatDuration, workoutLogService, findExerciseByIdOrName } from '../services';
+import type { WorkoutLog } from '../models';
 
 type Nav = StackNavigationProp<RootStackParamList>;
+type ProgressPeriod = 'semana' | 'mes' | 'ano';
+
+const HERO_BG = require('../../assets/images/workout_hero_bg.jpg');
+
+function formatHeaderDate(date: Date): string {
+  const days = [
+    'Domingo',
+    'Segunda',
+    'Terça',
+    'Quarta',
+    'Quinta',
+    'Sexta',
+    'Sábado',
+  ];
+  const months = [
+    'janeiro',
+    'fevereiro',
+    'março',
+    'abril',
+    'maio',
+    'junho',
+    'julho',
+    'agosto',
+    'setembro',
+    'outubro',
+    'novembro',
+    'dezembro',
+  ];
+  return `${days[date.getDay()]}, ${date.getDate()} de ${months[date.getMonth()]}`;
+}
+
+function fmtVol(v: number): string {
+  if (v >= 1000) return `${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg`;
+  return `${v} kg`;
+}
+
+function getWeekDayProgress(logs: WorkoutLog[]) {
+  const now = new Date();
+  const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Seg, 6 = Dom
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek);
+  monday.setHours(0, 0, 0, 0);
+
+  const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const trainedDays = new Set<number>();
+
+  for (const log of logs) {
+    const logDate = new Date(log.startedAt);
+    const diffDays = Math.floor((logDate.getTime() - monday.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 0 && diffDays < 7) {
+      trainedDays.add(diffDays);
+    }
+  }
+
+  return days.map((label, index) => ({
+    label,
+    index,
+    isCompleted: trainedDays.has(index),
+    isToday: index === dayOfWeek,
+  }));
+}
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const { user } = useUser();
   const { workouts, loading: workoutsLoading } = useWorkouts();
   const { logs, reload: reloadLogs } = useWorkoutLogs();
+  const { exercises } = useExercises();
   const [streak, setStreak] = useState(0);
+  const [progressPeriod, setProgressPeriod] = useState<ProgressPeriod>('semana');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -37,39 +105,59 @@ export default function HomeScreen() {
     [workouts],
   );
 
-  const firstName = user?.name.split(' ')[0] ?? 'Atleta';
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Eduardo';
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const greeting = hour < 12 ? 'Bom dia,' : hour < 18 ? 'Boa tarde,' : 'Boa noite,';
+  const currentDateStr = useMemo(() => formatHeaderDate(new Date()), []);
 
   const exerciseCount = todayWorkout?.exercises.length ?? 0;
-  const estimatedMinutes = exerciseCount * 10;
+  const estimatedMinutes = exerciseCount * 10 || 30;
 
-  const totalVolume = useMemo(
-    () => logs.reduce((acc, l) => acc + l.totalVolume, 0),
-    [logs],
+  // Extrai os grupos musculares do treino de hoje
+  const todayMuscles = useMemo(() => {
+    if (!todayWorkout) return 'Geral';
+    const set = new Set<string>();
+    todayWorkout.exercises.forEach((we) => {
+      const ex = findExerciseByIdOrName(exercises, we.exerciseId);
+      if (ex?.muscleGroup) set.add(ex.muscleGroup);
+    });
+    return set.size > 0 ? Array.from(set).join(' • ') : 'Peito • Costas • Ombros';
+  }, [todayWorkout, exercises]);
+
+  // Dias da semana e treinos concluídos na semana
+  const weekDays = useMemo(() => getWeekDayProgress(logs), [logs]);
+  const completedThisWeekCount = useMemo(
+    () => weekDays.filter((d) => d.isCompleted).length,
+    [weekDays],
   );
 
-  const recent = logs.slice(0, 3);
-  const evolution = useMemo(() => buildEvolution(logs), [logs]);
+  // Volume filtrado por período
+  const periodStats = useMemo(() => {
+    const now = new Date();
+    let filtered = logs;
 
-  const hasTrainedToday = useMemo(() => {
-    if (logs.length === 0) return false;
-    const lastLogDate = new Date(logs[0].startedAt);
-    const today = new Date();
-    return (
-      lastLogDate.getDate() === today.getDate() &&
-      lastLogDate.getMonth() === today.getMonth() &&
-      lastLogDate.getFullYear() === today.getFullYear()
-    );
-  }, [logs]);
+    if (progressPeriod === 'semana') {
+      const dayOfWeek = (now.getDay() + 6) % 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - dayOfWeek);
+      monday.setHours(0, 0, 0, 0);
+      filtered = logs.filter((l) => new Date(l.startedAt) >= monday);
+    } else if (progressPeriod === 'mes') {
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      filtered = logs.filter((l) => new Date(l.startedAt) >= firstOfMonth);
+    } else {
+      const firstOfYear = new Date(now.getFullYear(), 0, 1);
+      filtered = logs.filter((l) => new Date(l.startedAt) >= firstOfYear);
+    }
 
-  const daysSinceLastWorkout = useMemo(() => {
-    if (logs.length === 0) return 999;
-    const lastLogDate = new Date(logs[0].startedAt).getTime();
-    const now = Date.now();
-    const diffDays = Math.floor((now - lastLogDate) / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  }, [logs]);
+    const volume = filtered.reduce((acc, l) => acc + l.totalVolume, 0);
+    return {
+      count: filtered.length,
+      volume,
+    };
+  }, [logs, progressPeriod]);
+
+  const recentLogs = useMemo(() => logs.slice(0, 4), [logs]);
 
   return (
     <ScrollView
@@ -81,559 +169,650 @@ export default function HomeScreen() {
         <LoadingState />
       ) : (
         <>
-          <Header firstName={firstName} greeting={greeting} streak={streak} />
+          {/* Header Superior com Saudação e Notificações */}
+          <View style={styles.topHeader}>
+            <View style={styles.greetingWrap}>
+              <Text style={styles.greetingSub}>{greeting}</Text>
+              <Text style={styles.greetingName}>{firstName} 👋</Text>
+              <Text style={styles.currentDate}>{currentDateStr}</Text>
+            </View>
+            <Pressable
+              style={styles.bellButton}
+              onPress={() => {}}
+              hitSlop={10}
+            >
+              <Icon name="bell" size={22} color="#FFFFFF" />
+              <View style={styles.bellBadge} />
+            </Pressable>
+          </View>
 
-          <DallasMascotCard
-            streak={streak}
-            hasTrainedToday={hasTrainedToday}
-            daysSinceLastWorkout={daysSinceLastWorkout}
-          />
-
+          {/* Card Principal: TREINO DE HOJE */}
           {todayWorkout ? (
-            <TodayWorkout
-              name={todayWorkout.name}
-              exerciseCount={exerciseCount}
-              minutes={estimatedMinutes}
-              onStart={() =>
-                navigation.navigate('ExerciseExecution', { workoutId: todayWorkout.id })
-              }
-            />
+            <View style={styles.heroCardContainer}>
+              <ImageBackground
+                source={HERO_BG}
+                style={styles.heroBg}
+                imageStyle={styles.heroBgImage}
+              >
+                <LinearGradient
+                  colors={['rgba(10, 10, 12, 0.45)', 'rgba(10, 10, 12, 0.94)']}
+                  style={styles.heroGradient}
+                >
+                  <View style={styles.heroHeaderBadge}>
+                    <Icon name="flash" size={13} color={colors.primary} />
+                    <Text style={styles.heroBadgeText}>TREINO DE HOJE</Text>
+                  </View>
+
+                  <Text style={styles.heroTitle}>{todayWorkout.name}</Text>
+                  <Text style={styles.heroSubtitle}>{todayMuscles}</Text>
+
+                  <View style={styles.heroMetaRow}>
+                    <View style={styles.heroMetaItem}>
+                      <Icon name="dumbbell" size={14} color="#A1A1AA" />
+                      <Text style={styles.heroMetaText}>
+                        {exerciseCount} exercícios
+                      </Text>
+                    </View>
+                    <View style={styles.heroMetaItem}>
+                      <Icon name="clock" size={14} color="#A1A1AA" />
+                      <Text style={styles.heroMetaText}>
+                        ~{estimatedMinutes} min
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.heroCtaButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('ExerciseExecution', {
+                        workoutId: todayWorkout.id,
+                      })
+                    }
+                  >
+                    <Icon name="play" size="sm" color="#FFFFFF" />
+                    <Text style={styles.heroCtaText}>Começar treino</Text>
+                  </Pressable>
+                </LinearGradient>
+              </ImageBackground>
+            </View>
           ) : (
-            <Card style={styles.emptyWorkout}>
+            <Card style={styles.emptyWorkoutCard}>
               <View style={styles.emptyIcon}>
-                <Icon name="dumbbell" size={20} color={colors.text} />
+                <Icon name="dumbbell" size={24} color={colors.primary} />
               </View>
-              <Text style={[typography.subtitle, styles.emptyWorkoutTitle]}>
-                NENHUM TREINO AINDA
-              </Text>
-              <Text style={[typography.bodySecondary, styles.emptyWorkoutText]}>
-                Monte sua primeira rotina e comece a acompanhar sua evolução.
+              <Text style={styles.emptyTitle}>NENHUM TREINO CADASTRADO</Text>
+              <Text style={styles.emptyText}>
+                Monte sua rotina de musculação e comece seu progresso hoje.
               </Text>
               <Pressable
-                style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.heroCtaButton,
+                  pressed && styles.pressed,
+                ]}
                 onPress={() => navigation.navigate('WorkoutForm', {})}
               >
-                <Icon name="plus" size="sm" color={colors.white} />
-                <Text style={styles.emptyCtaText}>Criar treino</Text>
+                <Icon name="plus" size="sm" color="#FFFFFF" />
+                <Text style={styles.heroCtaText}>Criar primeiro treino</Text>
               </Pressable>
             </Card>
           )}
 
-          {logs.length > 0 ? (
-            <>
-              <Section title="Resumo de hoje">
-                <View style={styles.summaryRow}>
-                  <SummaryStat
-                    icon="flame"
-                    value={`${fmtVol(totalVolume)} kg`}
-                    label="Volume"
-                  />
-                  <SummaryStat
-                    icon="checkmarkDone"
-                    value={`${logs.length}`}
-                    label="Treinos"
-                  />
-                  <SummaryStat
-                    icon="calendar"
-                    value={logs[0] ? formatDate(logs[0].startedAt).slice(0, 5) : '—'}
-                    label="Último"
-                    highlight
-                  />
-                </View>
-              </Section>
+          {/* Banner Compacto de Sequência / Streak */}
+          <Pressable
+            style={({ pressed }) => [styles.streakCard, pressed && styles.pressed]}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' } as any)}
+          >
+            <View style={styles.streakIconWrap}>
+              <Icon name="flame" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.streakTextWrap}>
+              <Text style={styles.streakTitle}>
+                {streak > 0
+                  ? `${streak} ${streak === 1 ? 'dia seguido' : 'dias seguidos'}`
+                  : 'Comece sua sequência'}
+              </Text>
+              <Text style={styles.streakSubtitle}>
+                Continue treinando para manter sua sequência!
+              </Text>
+            </View>
+            <Icon name="chevronRight" size={16} color="#71717A" />
+          </Pressable>
 
-              {evolution ? (
-                <Section title="Evolução" style={styles.sectionSpacing}>
-                  <Card style={styles.evolutionCard}>
-                    <View style={styles.evolutionTop}>
-                      <View style={styles.evolutionIcon}>
-                        <Icon name="trendUp" size={18} color={colors.primary} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[typography.body, styles.evolutionName]}>
-                          {evolution.name}
-                        </Text>
-                        <Text style={styles.evolutionMeta}>
-                          {evolution.from} kg → {evolution.to} kg
-                        </Text>
-                      </View>
-                      <View style={styles.deltaPill}>
-                        <Text style={styles.deltaText}>+{evolution.delta}%</Text>
-                      </View>
+          {/* Seção: SEU PROGRESSO */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>SEU PROGRESSO</Text>
+              <View style={styles.segmentedTabsContainer}>
+                {(['semana', 'mes', 'ano'] as const).map((period) => {
+                  const active = progressPeriod === period;
+                  const label =
+                    period === 'semana' ? 'Semana' : period === 'mes' ? 'Mês' : 'Ano';
+                  return (
+                    <Pressable
+                      key={period}
+                      onPress={() => setProgressPeriod(period)}
+                      style={[
+                        styles.periodPill,
+                        active && styles.periodPillActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.periodPillText,
+                          active && styles.periodPillTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 3 Métricas em Linha */}
+            <View style={styles.metricsRow}>
+              <View style={styles.metricCard}>
+                <View style={styles.metricIconBox}>
+                  <Icon name="dumbbell" size={16} color={colors.primary} />
+                </View>
+                <Text style={styles.metricValue}>{periodStats.count}</Text>
+                <Text style={styles.metricLabel}>
+                  {progressPeriod === 'semana'
+                    ? 'Treinos esta semana'
+                    : progressPeriod === 'mes'
+                    ? 'Treinos este mês'
+                    : 'Treinos este ano'}
+                </Text>
+              </View>
+
+              <View style={styles.metricCard}>
+                <View style={styles.metricIconBox}>
+                  <Icon name="flame" size={16} color={colors.primary} />
+                </View>
+                <Text style={styles.metricValue}>
+                  {fmtVol(periodStats.volume).replace(' kg', '')}
+                  <Text style={styles.metricUnit}> kg</Text>
+                </Text>
+                <Text style={styles.metricLabel}>Volume total</Text>
+              </View>
+
+              <View style={styles.metricCard}>
+                <View style={styles.metricIconBox}>
+                  <Icon name="flame" size={16} color={colors.primary} />
+                </View>
+                <Text style={styles.metricValue}>{streak}</Text>
+                <Text style={styles.metricLabel}>Dias seguidos</Text>
+              </View>
+            </View>
+
+            {/* Tracker Semanal de Dias */}
+            <View style={styles.weekTrackerCard}>
+              <View style={styles.weekTrackerHeader}>
+                <Text style={styles.weekTrackerTitle}>Treinos esta semana</Text>
+                <Text style={styles.weekTrackerCount}>
+                  {completedThisWeekCount}/7 concluídos
+                </Text>
+              </View>
+
+              <View style={styles.weekBarsRow}>
+                {weekDays.map((d) => (
+                  <View key={d.label} style={styles.dayCol}>
+                    <View
+                      style={[
+                        styles.dayBar,
+                        d.isCompleted && styles.dayBarCompleted,
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.dayText,
+                        d.isCompleted && styles.dayTextCompleted,
+                      ]}
+                    >
+                      {d.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          {/* Seção: ATIVIDADE RECENTE */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>ATIVIDADE RECENTE</Text>
+              <Pressable
+                onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' } as any)}
+                hitSlop={10}
+              >
+                <Text style={styles.seeHistoryText}>Ver histórico {'->'}</Text>
+              </Pressable>
+            </View>
+
+            {recentLogs.length > 0 ? (
+              <View style={styles.recentList}>
+                {recentLogs.map((log) => (
+                  <Pressable
+                    key={log.id}
+                    style={({ pressed }) => [
+                      styles.recentItemCard,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => navigation.navigate('LogDetail', { logId: log.id })}
+                  >
+                    <View style={styles.recentCheckCircle}>
+                      <Icon name="check" size={12} color="#FFFFFF" />
                     </View>
-                    <Pressable
-                      onPress={() =>
-                        navigation.navigate('ExerciseProgress', {
-                          exerciseId: evolution.exerciseId,
-                          name: evolution.name,
-                        })
-                      }
-                      style={styles.evolutionLink}
-                    >
-                      <Text style={styles.seeAll}>Ver progresso</Text>
-                      <Icon name="chevronRight" size="xs" color={colors.primary} />
-                    </Pressable>
-                  </Card>
-                </Section>
-              ) : null}
-
-              <Section title="Atividade">
-                <View style={styles.recentList}>
-                  {recent.map((log) => (
-                    <Pressable
-                      key={log.id}
-                      onPress={() => navigation.navigate('LogDetail', { logId: log.id })}
-                      style={({ pressed }) => [pressed && styles.pressed]}
-                    >
-                      <Card style={styles.historyCard}>
-                        <View style={styles.historyCheck}>
-                          <Icon name="checkmarkDone" size="sm" color={colors.success} />
-                        </View>
-                        <View style={styles.historyInfo}>
-                          <Text style={[typography.body, styles.historyName]} numberOfLines={1}>
-                            {log.workoutName}
-                          </Text>
-                          <Text style={styles.historyMeta}>
-                            {formatDate(log.startedAt)} · {formatDuration(log.durationSeconds)}
-                          </Text>
-                        </View>
-                        <Text style={styles.historyVol}>{fmtVol(log.totalVolume)} kg</Text>
-                      </Card>
-                    </Pressable>
-                  ))}
-                </View>
-              </Section>
-            </>
-          ) : (
-            <Section title="Sua evolução" style={styles.sectionSpacing}>
-              <EmptyState
-                icon="dumbbell"
-                title="SEUS DADOS COMEÇAM AQUI"
-                message="Complete seu primeiro treino e acompanhe seu progresso, volume e sequência."
-                actionLabel="Bora treinar"
-                onAction={() =>
-                  navigation.navigate(
-                    'WorkoutDetail',
-                    todayWorkout ? { workoutId: todayWorkout.id } : ({} as any),
-                  )
-                }
-              />
-            </Section>
-          )}
+                    <View style={styles.recentInfo}>
+                      <Text style={styles.recentName} numberOfLines={1}>
+                        {log.workoutName}
+                      </Text>
+                      <Text style={styles.recentMeta}>
+                        {formatDate(log.startedAt)} • {formatDuration(log.durationSeconds)} • {fmtVol(log.totalVolume)}
+                      </Text>
+                    </View>
+                    <Icon name="chevronRight" size={16} color="#71717A" />
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyRecentCard}>
+                <Text style={styles.emptyRecentText}>
+                  Nenhum treino concluído recentemente.
+                </Text>
+              </View>
+            )}
+          </View>
         </>
       )}
     </ScrollView>
   );
 }
 
-function Header({
-  firstName,
-  greeting,
-  streak,
-}: {
-  firstName: string;
-  greeting: string;
-  streak: number;
-}) {
-  return (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.dateText}>
-          {new Date().toLocaleDateString('pt-BR', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
-        </Text>
-        <Text style={[typography.heroTitle, styles.greeting]}>
-          {greeting}, {firstName}.
-        </Text>
-      </View>
-      <View style={styles.streak}>
-        <Icon name="streak" size={16} color={colors.primary} />
-        <Text style={styles.streakValue}>{streak}</Text>
-        <Text style={styles.streakLabel}>dias</Text>
-      </View>
-    </View>
-  );
-}
-
-function TodayWorkout({
-  name,
-  exerciseCount,
-  minutes,
-  onStart,
-}: {
-  name: string;
-  exerciseCount: number;
-  minutes: number;
-  onStart: () => void;
-}) {
-  return (
-    <View style={[styles.today, shadows.card]}>
-      <View style={styles.todayLabel}>
-        <Icon name="flash" size={11} color={colors.primary} />
-        <Text style={styles.todayLabelText}>TREINO DE HOJE</Text>
-      </View>
-      <Text style={styles.todayName}>{name}</Text>
-      <View style={styles.todayMeta}>
-        <MetaChip icon="repeat" text={`${exerciseCount} exercícios`} />
-        <MetaChip icon="clock" text={`~${minutes} min`} />
-      </View>
-      <Pressable
-        style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}
-        onPress={onStart}
-      >
-        <Icon name="play" size="sm" color={colors.white} />
-        <Text style={styles.startText}>Começar treino</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function MetaChip({ icon, text }: { icon: AppIconName; text: string }) {
-  return (
-    <View style={styles.metaChip}>
-      <Icon name={icon} size={12} color={colors.textSecondary} />
-      <Text style={styles.metaChipText}>{text}</Text>
-    </View>
-  );
-}
-
-function SummaryStat({
-  icon,
-  value,
-  label,
-  highlight = false,
-}: {
-  icon: AppIconName;
-  value: string;
-  label: string;
-  highlight?: boolean;
-}) {
-  return (
-    <View style={[styles.summaryCard, highlight && styles.summaryHighlight]}>
-      <Icon
-        name={icon}
-        size={14}
-        color={highlight ? colors.primary : colors.textSecondary}
-      />
-      <Text style={[styles.summaryValue, highlight && styles.summaryValueHighlight]}>
-        {value}
-      </Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
-  );
-}
-
-interface EvolutionHighlight {
-  exerciseId: string;
-  name: string;
-  from: number;
-  to: number;
-  delta: number;
-}
-
-function buildEvolution(
-  logs: { exercises: { exerciseId: string; exerciseName: string; sets: { weight: number; completed: boolean; category?: string }[] }[] }[],
-): EvolutionHighlight | null {
-  const byExercise = new Map<
-    string,
-    { name: string; weights: number[] }
-  >();
-  for (const log of logs) {
-    for (const ex of log.exercises) {
-      const prev = byExercise.get(ex.exerciseId) ?? { name: ex.exerciseName, weights: [] };
-      const working = ex.sets
-        .filter((s) => s.completed && s.weight > 0 && (s.category ?? 'working') === 'working')
-        .map((s) => s.weight);
-      if (working.length > 0) {
-        prev.weights.push(Math.max(...working));
-        byExercise.set(ex.exerciseId, prev);
-      }
-    }
-  }
-
-  let best: EvolutionHighlight | null = null;
-  for (const [id, data] of byExercise) {
-    if (data.weights.length < 2) continue;
-    const first = data.weights[0];
-    const last = data.weights[data.weights.length - 1];
-    if (first <= 0 || last < first) continue;
-    const delta = Math.round(((last - first) / first) * 1000) / 10;
-    if (!best || delta > best.delta) {
-      best = { exerciseId: id, name: data.name, from: first, to: last, delta };
-    }
-  }
-  return best;
-}
-
-function fmtVol(v: number): string {
-  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
-  return `${v}`;
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0A0A0C',
   },
   content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl,
-    paddingTop: 0,
+    paddingHorizontal: 16,
+    paddingTop: 52,
+    paddingBottom: 40,
   },
-  header: {
+  pressed: {
+    opacity: 0.86,
+  },
+  topHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
-    paddingTop: spacing.lg,
+    marginBottom: 20,
   },
-  dateText: {
+  greetingWrap: {
+    flex: 1,
+  },
+  greetingSub: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#8E8E93',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  greetingName: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 2,
+    letterSpacing: -0.4,
+  },
+  currentDate: {
+    ...typography.caption,
+    color: '#71717A',
+    fontSize: 13,
+    marginTop: 4,
     textTransform: 'capitalize',
-    marginBottom: 2,
   },
-  greeting: {
-    textTransform: 'none',
+  bellButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#161618',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#26262A',
+    position: 'relative',
   },
-  streak: {
+  bellBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  heroCardContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#26262A',
+    marginBottom: 14,
+    backgroundColor: '#121214',
+  },
+  heroBg: {
+    width: '100%',
+  },
+  heroBgImage: {
+    resizeMode: 'cover',
+    borderRadius: 20,
+  },
+  heroGradient: {
+    padding: 20,
+  },
+  heroHeaderBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
+    gap: 6,
+    marginBottom: 8,
   },
-  streakValue: {
-    color: colors.text,
+  heroBadgeText: {
+    color: colors.primary,
     fontWeight: '800',
-    fontSize: 15,
-  },
-  streakLabel: {
-    color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
-  today: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    marginBottom: spacing.xxl,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
   },
-  todayLabel: {
+  heroSubtitle: {
+    ...typography.body,
+    color: '#D4D4D8',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 20,
+  },
+  heroMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  todayLabelText: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-  },
-  todayName: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    textTransform: 'uppercase',
-  },
-  todayMeta: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  metaChipText: {
-    color: colors.textSecondary,
+  heroMetaText: {
+    color: '#A1A1AA',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  startButton: {
+  heroCtaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: 15,
+    borderRadius: 14,
+    paddingVertical: 14,
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  startText: {
-    color: colors.white,
-    fontSize: 15,
+  heroCtaText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '700',
   },
-  emptyWorkout: {
+  emptyWorkoutCard: {
+    backgroundColor: '#141416',
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
-    padding: spacing.xxl,
-    marginBottom: spacing.xxl,
+    borderWidth: 1,
+    borderColor: '#26262A',
+    marginBottom: 14,
   },
   emptyIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 30, 39, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: 12,
   },
-  emptyWorkoutTitle: {
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  emptyWorkoutText: {
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  emptyCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: 13,
-    paddingHorizontal: spacing.xxl,
-    marginTop: spacing.lg,
-  },
-  emptyCtaText: {
-    color: colors.white,
-    fontWeight: '700',
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    alignItems: 'flex-start',
-    gap: spacing.xs,
-  },
-  summaryHighlight: {
-    borderColor: 'rgba(229, 9, 20, 0.4)',
-  },
-  summaryValue: {
-    fontSize: 18,
+  emptyTitle: {
+    fontSize: 16,
     fontWeight: '800',
-    color: colors.text,
+    color: '#FFFFFF',
+    marginBottom: 6,
+    textAlign: 'center',
   },
-  summaryValueHighlight: {
-    color: colors.primary,
+  emptyText: {
+    fontSize: 13,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginBottom: 18,
+    lineHeight: 18,
   },
-  summaryLabel: {
-    fontSize: 10,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    fontWeight: '600',
-  },
-  sectionSpacing: {
-    marginTop: spacing.lg,
-  },
-  evolutionCard: {
-    gap: spacing.md,
-  },
-  evolutionTop: {
+  streakCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    backgroundColor: '#161618',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#26262A',
+    marginBottom: 22,
   },
-  evolutionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.scrim,
+  streakIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 30, 39, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  evolutionName: {
+  streakTextWrap: {
+    flex: 1,
+  },
+  streakTitle: {
+    fontSize: 15,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
-  evolutionMeta: {
-    fontSize: 13,
-    color: colors.textSecondary,
+  streakSubtitle: {
+    fontSize: 12,
+    color: '#8E8E93',
     marginTop: 2,
   },
-  deltaPill: {
-    backgroundColor: colors.scrim,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+  sectionContainer: {
+    marginBottom: 24,
   },
-  deltaText: {
-    color: colors.primary,
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  evolutionLink: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  seeAll: {
-    color: colors.primary,
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.6,
+  },
+  seeHistoryText: {
     fontSize: 13,
     fontWeight: '600',
+    color: colors.primary,
+  },
+  segmentedTabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#141416',
+    borderRadius: 20,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#242428',
+  },
+  periodPill: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  periodPillActive: {
+    backgroundColor: colors.primary,
+  },
+  periodPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  periodPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#141416',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#242428',
+  },
+  metricIconBox: {
+    marginBottom: 8,
+  },
+  metricValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  metricUnit: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: '#8E8E93',
+    marginTop: 4,
+    lineHeight: 14,
+    fontWeight: '500',
+  },
+  weekTrackerCard: {
+    backgroundColor: '#141416',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#242428',
+  },
+  weekTrackerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  weekTrackerTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#E4E4E7',
+  },
+  weekTrackerCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  weekBarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dayCol: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  dayBar: {
+    width: 32,
+    height: 48,
+    backgroundColor: '#1F1F24',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  dayBarCompleted: {
+    backgroundColor: colors.primary,
+  },
+  dayText: {
+    fontSize: 11,
+    color: '#71717A',
+    fontWeight: '600',
+  },
+  dayTextCompleted: {
+    color: '#FFFFFF',
   },
   recentList: {
-    gap: spacing.md,
+    gap: 8,
   },
-  historyCard: {
+  recentItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
+    backgroundColor: '#141416',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#222226',
   },
-  historyCheck: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.successLight,
+  recentCheckCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1E382B',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  historyInfo: {
+  recentInfo: {
     flex: 1,
-    gap: 2,
   },
-  historyName: {
-    fontWeight: '600',
-  },
-  historyMeta: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  historyVol: {
-    fontSize: 13,
+  recentName: {
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.text,
+    color: '#FFFFFF',
   },
-  pressed: {
-    opacity: 0.85,
+  recentMeta: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  emptyRecentCard: {
+    backgroundColor: '#141416',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#242428',
+    alignItems: 'center',
+  },
+  emptyRecentText: {
+    color: '#71717A',
+    fontSize: 13,
   },
 });

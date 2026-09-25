@@ -46,41 +46,41 @@ export interface ThemePalette {
 
 export const darkColors: ThemePalette = {
   // Fundos
-  background: '#080808',
-  surface: '#121212',
-  card: '#181818',
-  elevated: '#202020',
-  surfaceLight: '#242424',
-  surfaceLighter: '#2E2E2E',
+  background: '#0A0A0C',
+  surface: '#121214',
+  card: '#141416',
+  elevated: '#1C1C20',
+  surfaceLight: '#222226',
+  surfaceLighter: '#2C2C32',
 
   // Texto
-  text: '#F5F5F5',
-  textSecondary: '#969696',
-  textMuted: '#666666',
+  text: '#FFFFFF',
+  textSecondary: '#A1A1AA',
+  textMuted: '#71717A',
 
-  // Acento principal (vermelho de assinatura).
-  primary: '#E50914',
-  primaryDark: '#B00610',
+  // Acento principal (vermelho de assinatura DALLAS).
+  primary: '#FF1E27',
+  primaryDark: '#D60E16',
   primaryLight: '#FF4D55',
-  accent: '#E50914',
+  accent: '#FF1E27',
 
   // Verde apenas quando semanticamente necessário e discreto.
-  success: '#34D399',
-  successDark: '#0E9F6E',
-  successLight: 'rgba(52, 211, 153, 0.10)',
+  success: '#22C55E',
+  successDark: '#16A34A',
+  successLight: 'rgba(34, 197, 94, 0.12)',
 
-  danger: '#E50914',
-  dangerDark: '#B00610',
-  dangerLight: 'rgba(229, 9, 20, 0.12)',
+  danger: '#FF1E27',
+  dangerDark: '#D60E16',
+  dangerLight: 'rgba(255, 30, 39, 0.14)',
 
   // Estrutura
-  border: '#292929',
-  borderLight: '#1E1E1E',
+  border: '#26262B',
+  borderLight: '#1C1C20',
   white: '#FFFFFF',
   black: '#000000',
-  overlay: 'rgba(0, 0, 0, 0.72)',
-  cardShadow: 'rgba(0, 0, 0, 0.5)',
-  scrim: 'rgba(229, 9, 20, 0.12)',
+  overlay: 'rgba(0, 0, 0, 0.75)',
+  cardShadow: 'rgba(0, 0, 0, 0.6)',
+  scrim: 'rgba(255, 30, 39, 0.14)',
   scrimSubtle: 'rgba(255, 255, 255, 0.04)',
 };
 
