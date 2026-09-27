@@ -71,7 +71,18 @@ export default function OnboardingScreen({ onExit }: Props) {
   // Account State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>('asset:dallas_base');
+
+  const accountScrollRef = useRef<ScrollView>(null);
+
+  const scrollToInput = (yOffset: number) => {
+    setTimeout(() => {
+      accountScrollRef.current?.scrollTo({ y: yOffset, animated: true });
+    }, 120);
+  };
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -143,6 +154,10 @@ export default function OnboardingScreen({ onExit }: Props) {
   const handleCreateAccountAndPlan = async () => {
     if (!accountRef.current && (!username.trim() || password.length < 4)) {
       setError('Informe um nome de usuário e uma senha de no mínimo 4 caracteres.');
+      return;
+    }
+    if (!accountRef.current && password !== confirmPassword) {
+      setError('As senhas digitadas não coincidem.');
       return;
     }
     setError(null);
@@ -459,7 +474,8 @@ export default function OnboardingScreen({ onExit }: Props) {
   if (phase === 'account') {
     return (
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 8 : 0}
         style={styles.root}
       >
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -471,10 +487,15 @@ export default function OnboardingScreen({ onExit }: Props) {
         </View>
 
         <ScrollView
+          ref={accountScrollRef}
           style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingTop: 20 }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: 16, paddingBottom: Math.max(insets.bottom + 160, 220) },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <View style={styles.accountBrand}>
             <Image source={logoImg} style={styles.smallLogo} resizeMode="contain" />
@@ -506,22 +527,72 @@ export default function OnboardingScreen({ onExit }: Props) {
                 }}
                 autoCapitalize="none"
                 autoCorrect={false}
+                onFocus={() => scrollToInput(120)}
               />
             </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>SENHA</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Mínimo 4 caracteres"
-                placeholderTextColor="#636366"
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  setError(null);
-                }}
-                secureTextEntry
-              />
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Mínimo 4 caracteres"
+                  placeholderTextColor="#636366"
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    setError(null);
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onFocus={() => scrollToInput(200)}
+                />
+                <Pressable
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword((p) => !p)}
+                  hitSlop={10}
+                  accessibilityLabel={showPassword ? 'Ocultar senha' : 'Ver senha'}
+                >
+                  <Icon
+                    name={showPassword ? 'eyeOff' : 'eye'}
+                    size={20}
+                    color="#8E8E93"
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>CONFIRMAR SENHA</Text>
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Repita sua senha"
+                  placeholderTextColor="#636366"
+                  value={confirmPassword}
+                  onChangeText={(t) => {
+                    setConfirmPassword(t);
+                    setError(null);
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onFocus={() => scrollToInput(280)}
+                />
+                <Pressable
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword((p) => !p)}
+                  hitSlop={10}
+                  accessibilityLabel={showConfirmPassword ? 'Ocultar confirmação de senha' : 'Ver confirmação de senha'}
+                >
+                  <Icon
+                    name={showConfirmPassword ? 'eyeOff' : 'eye'}
+                    size={20}
+                    color="#8E8E93"
+                  />
+                </Pressable>
+              </View>
             </View>
 
             <Pressable
@@ -1017,6 +1088,25 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: '#FFFFFF',
     fontSize: 15,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#141416',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#242428',
+    paddingHorizontal: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    color: '#FFFFFF',
+    fontSize: 15,
+  },
+  eyeButton: {
+    padding: 8,
+    marginRight: -4,
   },
   centerEverything: {
     alignItems: 'center',

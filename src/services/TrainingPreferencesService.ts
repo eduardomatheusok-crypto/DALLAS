@@ -9,11 +9,22 @@ import type { UserTrainingPreferences } from '../models';
  */
 export class TrainingPreferencesService {
   async getFor(userId: string): Promise<UserTrainingPreferences | null> {
-    const prefs = await storage.getTrainingPreferences<UserTrainingPreferences>();
-    return prefs && prefs.userId === userId ? prefs : null;
+    if (!userId) return null;
+    const perUser = await storage.getCustom<UserTrainingPreferences | null>(
+      `@dallas/preferences/${userId}`,
+      null,
+    );
+    if (perUser && perUser.userId === userId) {
+      return perUser;
+    }
+    const legacy = await storage.getTrainingPreferences<UserTrainingPreferences>();
+    return legacy && legacy.userId === userId ? legacy : null;
   }
 
   async save(prefs: UserTrainingPreferences): Promise<void> {
+    if (prefs.userId) {
+      await storage.setCustom(`@dallas/preferences/${prefs.userId}`, prefs);
+    }
     await storage.setTrainingPreferences<UserTrainingPreferences>(prefs);
   }
 

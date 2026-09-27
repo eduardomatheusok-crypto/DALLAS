@@ -83,6 +83,7 @@ export interface WorkoutLog {
   durationSeconds: number;
   exercises: WorkoutLogExercise[];
   totalVolume: number;
+  ownerId?: string;
 }
 
 export const SET_TYPES: { value: SetType; label: string; short: string }[] = [

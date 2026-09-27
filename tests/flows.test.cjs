@@ -8,8 +8,8 @@ const catalog = JSON.parse(fs.readFileSync('backend/src/main/resources/exercise-
 function environment() {
   const values = new Map();
   const storage = {};
-  for (const key of ['Exercises','Workouts','User','Token','TrainingPreferences']) {
-    storage[`get${key}`] = async () => values.get(key) ?? (['Exercises','Workouts'].includes(key) ? [] : null);
+  for (const key of ['Exercises','Workouts','User','Token','TrainingPreferences','Logs']) {
+    storage[`get${key}`] = async () => values.get(key) ?? (['Exercises','Workouts','Logs'].includes(key) ? [] : null);
     storage[`set${key}`] = async value => values.set(key, value);
   }
   storage.getCustom = async (key, fallback) => values.get(key) ?? fallback;
@@ -20,6 +20,7 @@ function environment() {
   const api = {
     exercisesApi: { enabled: () => online, getAll: async () => { calls++; return remote; } },
     workoutsApi: { enabled: () => false },
+    logsApi: { enabled: () => false },
     userApi: { enabled: () => true, authMe: async () => ({id:'user-1', name:'Atleta'}), login: async () => ({ user: {id:'user-1',name:'Atleta'} }) },
   };
   const cache = new Map();
@@ -115,3 +116,152 @@ test('Finished session volume and duration use completed working sets, ignoring 
   const log=buildLog({workoutId:'workout',workoutName:'Upper A',startedAt:'2026-09-01T12:00:00Z',finishedAt:'2026-09-01T13:12:34Z',exercises:[{exerciseId:'actual-id',exerciseName:'Supino Reto',muscleGroup:'Peito',plannedSets:3,plannedReps:10,completed:true,sets:[set(true,40,10),set(true,50,8),set(false,100,10),set(true,10,10,'warmup')]}]});
   assert.equal(log.durationSeconds,4354);assert.equal(log.totalVolume,800);
 });
+
+test('Isolation: Conta A unlocks achievements, logout, Conta B starts with 0 and unlocks 1, Conta A retains only its own', async () => {
+  const env = environment();
+  const { achievementService } = env.load('src/services/AchievementService.ts');
+  const { userService } = env.load('src/services/UserService.ts');
+  const { workoutLogService, buildLog } = env.load('src/services/WorkoutLogService.ts');
+
+  const makeSet = (weight = 20, reps = 10) => ({
+    id: Math.random().toString(),
+    setNumber: 1,
+    weight,
+    reps,
+    completed: true,
+    type: 'normal',
+    category: 'working',
+  });
+
+  // --- Conta A: Login e progresso inicial ---
+  await env.storage.setUser({ id: 'user-A', name: 'Atleta A' });
+  const logA1 = buildLog({
+    workoutId: 'w-a1',
+    workoutName: 'Treino A1',
+    startedAt: '2026-09-01T10:00:00Z',
+    finishedAt: '2026-09-01T11:00:00Z',
+    exercises: [
+      {
+        exerciseId: 'ex-1',
+        exerciseName: 'Supino',
+        muscleGroup: 'Peito',
+        plannedSets: 1,
+        plannedReps: 10,
+        completed: true,
+        sets: [makeSet(50, 10)],
+      },
+    ],
+  });
+  await workoutLogService.saveLog(logA1);
+
+  const logsA = await workoutLogService.getAll();
+  assert.equal(logsA.length, 1);
+  assert.equal(logsA[0].ownerId, 'user-A');
+
+  // Conta A avalia conquistas (desbloqueia PRIMEIRO_PASSO)
+  const unlockedA = await achievementService.evaluateOnWorkoutComplete({
+    userId: 'user-A',
+    allLogs: logsA,
+    currentLog: logA1,
+    currentStreak: 1,
+  });
+  assert.ok(unlockedA.some((a) => a.id === 'PRIMEIRO_PASSO'));
+  const userAAchievements = await achievementService.getUserAchievements('user-A');
+  assert.ok(userAAchievements.length > 0);
+  const userACount = userAAchievements.length;
+
+  // --- Logout de Conta A ---
+  await userService.logout();
+  assert.equal(await env.storage.getUser(), null);
+
+  // --- Conta B: Login recém-criada ---
+  await env.storage.setUser({ id: 'user-B', name: 'Atleta B' });
+
+  // Conta B NÃO pode ter nenhuma conquista de Conta A
+  const userBAchievementsInitial = await achievementService.getUserAchievements('user-B');
+  assert.equal(userBAchievementsInitial.length, 0, 'Conta B recém-criada não deve ter conquistas');
+
+  // Conta B NÃO pode ver os logs da Conta A
+  const logsBInitial = await workoutLogService.getAll();
+  assert.equal(logsBInitial.length, 0, 'Conta B não deve ver treinos da Conta A');
+
+  // Conta B realiza seu primeiro treino
+  const logB1 = buildLog({
+    workoutId: 'w-b1',
+    workoutName: 'Treino B1',
+    startedAt: '2026-09-02T14:00:00Z',
+    finishedAt: '2026-09-02T15:00:00Z',
+    exercises: [
+      {
+        exerciseId: 'ex-2',
+        exerciseName: 'Agachamento',
+        muscleGroup: 'Pernas',
+        plannedSets: 1,
+        plannedReps: 10,
+        completed: true,
+        sets: [makeSet(30, 10)],
+      },
+    ],
+  });
+  await workoutLogService.saveLog(logB1);
+
+  const logsB = await workoutLogService.getAll();
+  assert.equal(logsB.length, 1);
+  assert.equal(logsB[0].ownerId, 'user-B');
+
+  // Conta B avalia conquistas
+  const unlockedB = await achievementService.evaluateOnWorkoutComplete({
+    userId: 'user-B',
+    allLogs: logsB,
+    currentLog: logB1,
+    currentStreak: 1,
+  });
+  assert.ok(unlockedB.some((a) => a.id === 'PRIMEIRO_PASSO'));
+  const userBAchievementsFinal = await achievementService.getUserAchievements('user-B');
+  assert.ok(userBAchievementsFinal.length > 0);
+
+  // --- Logout de Conta B ---
+  await userService.logout();
+
+  // --- Conta A: Login novamente ---
+  await env.storage.setUser({ id: 'user-A', name: 'Atleta A' });
+  const userAAchievementsAfter = await achievementService.getUserAchievements('user-A');
+  assert.equal(userAAchievementsAfter.length, userACount, 'Conta A mantém exclusivamente suas próprias conquistas');
+
+  const logsAAfter = await workoutLogService.getAll();
+  assert.equal(logsAAfter.length, 1, 'Conta A mantém exclusivamente seus próprios treinos');
+  assert.equal(logsAAfter[0].ownerId, 'user-A');
+});
+
+test('Achievement storage keys are strictly isolated per user and legacy global key is cleared on logout', async () => {
+  const env = environment();
+  const { getAchievementsStorageKey, achievementService } = env.load('src/services/AchievementService.ts');
+  const { userService } = env.load('src/services/UserService.ts');
+
+  assert.equal(getAchievementsStorageKey('user-123'), '@dallas/achievements/user-123');
+  assert.equal(getAchievementsStorageKey('user-456'), '@dallas/achievements/user-456');
+  assert.equal(getAchievementsStorageKey(''), '@dallas/achievements/anonymous');
+  assert.equal(getAchievementsStorageKey(null), '@dallas/achievements/anonymous');
+
+  // Save achievement for user-123
+  await achievementService.saveUserAchievements([{ achievementId: 'PRIMEIRO_PASSO', unlockedAt: '2026-09-01' }], 'user-123');
+  
+  // Set a legacy dirty global key
+  await env.storage.setCustom('@treino/achievements', [{ achievementId: 'CENTURIAO', unlockedAt: '2026-01-01' }]);
+  assert.ok((await env.storage.getCustom('@treino/achievements', null)) !== null);
+
+  // Logout clears user, token, and legacy @treino/achievements
+  await userService.logout();
+  assert.equal(await env.storage.getCustom('@treino/achievements', null), null);
+
+  // user-123 achievements are still preserved in @dallas/achievements/user-123
+  const user123 = await achievementService.getUserAchievements('user-123');
+  assert.equal(user123.length, 1);
+  assert.equal(user123[0].achievementId, 'PRIMEIRO_PASSO');
+
+  // user-456 still has zero achievements
+  const user456 = await achievementService.getUserAchievements('user-456');
+  assert.equal(user456.length, 0);
+});
+
+

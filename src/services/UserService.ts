@@ -71,6 +71,7 @@ export class UserService {
   async logout(): Promise<void> {
     await storage.setToken(null);
     await storage.setUser(null);
+    await storage.setCustom('@treino/achievements', null);
   }
 }
 

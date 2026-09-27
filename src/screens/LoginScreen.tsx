@@ -29,6 +29,7 @@ export default function LoginScreen({ onBack, onCreateAccount }: Props) {
   const { refresh } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,17 +116,33 @@ export default function LoginScreen({ onBack, onCreateAccount }: Props) {
 
           <View style={styles.field}>
             <Text style={styles.label}>SENHA</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Sua senha"
-              placeholderTextColor="#636366"
-              value={password}
-              onChangeText={(t) => {
-                setPassword(t);
-                setError(null);
-              }}
-              secureTextEntry
-            />
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Sua senha"
+                placeholderTextColor="#636366"
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  setError(null);
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Pressable
+                style={styles.eyeButton}
+                onPress={() => setShowPassword((p) => !p)}
+                hitSlop={10}
+                accessibilityLabel={showPassword ? 'Ocultar senha' : 'Ver senha'}
+              >
+                <Icon
+                  name={showPassword ? 'eyeOff' : 'eye'}
+                  size={20}
+                  color="#8E8E93"
+                />
+              </Pressable>
+            </View>
           </View>
 
           {/* Submit Button */}
@@ -268,6 +285,25 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: '#FFFFFF',
     fontSize: 15,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#121215',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#242428',
+    paddingHorizontal: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    color: '#FFFFFF',
+    fontSize: 15,
+  },
+  eyeButton: {
+    padding: 8,
+    marginRight: -4,
   },
   submitBtn: {
     backgroundColor: '#FF1E27',

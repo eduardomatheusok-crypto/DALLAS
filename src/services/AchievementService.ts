@@ -177,27 +177,53 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
 ];
 
-const ACHIEVEMENTS_STORAGE_KEY = '@treino/achievements';
+export const getAchievementsStorageKey = (userId?: string | null): string => {
+  if (userId && userId.trim()) {
+    return `@dallas/achievements/${userId.trim()}`;
+  }
+  return '@dallas/achievements/anonymous';
+};
 
 export class AchievementService {
-  async getUserAchievements(): Promise<UserAchievement[]> {
+  async getUserAchievements(userId?: string | null): Promise<UserAchievement[]> {
     try {
-      const raw = await storage.getCustom<UserAchievement[]>(ACHIEVEMENTS_STORAGE_KEY);
+      let resolvedId = userId;
+      if (!resolvedId) {
+        const user = await storage.getUser();
+        resolvedId = user?.id ?? null;
+      }
+      if (!resolvedId) return [];
+      const key = getAchievementsStorageKey(resolvedId);
+      const raw = await storage.getCustom<UserAchievement[]>(key, []);
       return Array.isArray(raw) ? raw : [];
     } catch {
       return [];
     }
   }
 
-  async saveUserAchievements(list: UserAchievement[]): Promise<void> {
-    await storage.setCustom(ACHIEVEMENTS_STORAGE_KEY, list);
+  async saveUserAchievements(list: UserAchievement[], userId?: string | null): Promise<void> {
+    let resolvedId = userId;
+    if (!resolvedId) {
+      const user = await storage.getUser();
+      resolvedId = user?.id ?? null;
+    }
+    if (!resolvedId) return;
+    const key = getAchievementsStorageKey(resolvedId);
+    await storage.setCustom(key, list);
+  }
+
+  async clearUserAchievements(userId: string): Promise<void> {
+    if (!userId) return;
+    const key = getAchievementsStorageKey(userId);
+    await storage.setCustom(key, []);
   }
 
   /**
    * Avalia todas as regras de conquistas após a finalização de um treino
-   * e retorna a lista de conquistas RECÉM-DESBLOQUEADAS nesta sessão.
+   * e retorna a lista de conquistas RECÉM-DESBLOQUEADAS nesta sessão para o usuário autenticado.
    */
   async evaluateOnWorkoutComplete(params: {
+    userId?: string | null;
     allLogs: WorkoutLog[];
     currentLog: WorkoutLog;
     userPrefs?: UserTrainingPreferences | null;
@@ -205,7 +231,12 @@ export class AchievementService {
     hasPR?: boolean;
     isLegDay?: boolean;
   }): Promise<Achievement[]> {
-    const existing = await this.getUserAchievements();
+    let resolvedId = params.userId;
+    if (!resolvedId) {
+      const user = await storage.getUser();
+      resolvedId = user?.id ?? null;
+    }
+    const existing = await this.getUserAchievements(resolvedId);
     const existingIds = new Set(existing.map((a) => a.achievementId));
     const now = new Date();
     const currentHour = now.getHours();
@@ -213,8 +244,13 @@ export class AchievementService {
 
     const newlyUnlockedIds: string[] = [];
 
-    const totalLogsCount = params.allLogs.length;
-    const totalVolume = params.allLogs.reduce((acc, l) => acc + (l.totalVolume || 0), 0);
+    // Filtra logs para garantir que somente os logs deste usuário contam para suas conquistas
+    const userLogs = resolvedId
+      ? params.allLogs.filter((l) => !l.ownerId || l.ownerId === resolvedId)
+      : params.allLogs;
+
+    const totalLogsCount = userLogs.length;
+    const totalVolume = userLogs.reduce((acc, l) => acc + (l.totalVolume || 0), 0);
 
     // 1. Primeiro Passo (1º treino)
     if (totalLogsCount >= 1 && !existingIds.has('PRIMEIRO_PASSO')) {
@@ -229,7 +265,7 @@ export class AchievementService {
     // 3. Primeira Semana Paga (3 dias diferentes na mesma semana)
     if (!existingIds.has('PRIMEIRA_SEMANA_PAGA')) {
       const oneWeekAgo = Date.now() - 7 * 86400000;
-      const recentLogs = params.allLogs.filter(
+      const recentLogs = userLogs.filter(
         (l) => new Date(l.startedAt).getTime() >= oneWeekAgo,
       );
       const uniqueDays = new Set(
@@ -243,7 +279,7 @@ export class AchievementService {
     // 4. Semana Blindada (Completar meta semanal de treinos)
     if (!existingIds.has('SEMANA_BLINDADA') && params.userPrefs?.exactFrequency) {
       const oneWeekAgo = Date.now() - 7 * 86400000;
-      const thisWeekLogs = params.allLogs.filter(
+      const thisWeekLogs = userLogs.filter(
         (l) => new Date(l.startedAt).getTime() >= oneWeekAgo,
       );
       const uniqueDays = new Set(
@@ -341,7 +377,7 @@ export class AchievementService {
         unlockedAt: new Date().toISOString(),
       })),
     ];
-    await this.saveUserAchievements(updated);
+    await this.saveUserAchievements(updated, resolvedId);
 
     return ACHIEVEMENTS.filter((a) => newlyUnlockedIds.includes(a.id));
   }

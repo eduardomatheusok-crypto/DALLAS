@@ -71,13 +71,17 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     workoutLogService.getStreak().then(setStreak).catch(() => {});
-    achievementService.getUserAchievements().then((list) => {
-      setUnlockedCount(list.length);
-    }).catch(() => {});
+    if (user?.id) {
+      achievementService.getUserAchievements(user.id).then((list) => {
+        setUnlockedCount(list.length);
+      }).catch(() => {});
+    } else {
+      setUnlockedCount(0);
+    }
 
     const handle = user?.username ? user.username : 'eduardo';
     communityService.getUserPosts(handle).then(setMyPosts).catch(() => {});
-  }, [logs.length, user?.username]);
+  }, [logs.length, user?.username, user?.id]);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Eduardo';
   const totalVolume = logs.reduce((acc, l) => acc + l.totalVolume, 0);
@@ -326,6 +330,7 @@ export default function ProfileScreen() {
         /* Vitrine de Conquistas Tab */
         <View style={styles.showcaseWrap}>
           <AchievementsShowcase
+            userId={user?.id}
             onSelectAchievement={(ach, unlocked) => {
               setSelectedAchievement({ achievement: ach, unlocked });
             }}

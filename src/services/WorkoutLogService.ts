@@ -9,6 +9,8 @@ import { logsApi } from '../api';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 
+import { trainingPreferencesService } from './TrainingPreferencesService';
+
 function computeVolume(sets: WorkoutSet[]): number {
   return sets
     .filter((s) => s.completed && isWorkingSet(s))
@@ -17,40 +19,48 @@ function computeVolume(sets: WorkoutSet[]): number {
 
 export class WorkoutLogService {
   async getAll(): Promise<WorkoutLog[]> {
+    const user = await storage.getUser();
     if (logsApi.enabled()) {
       try {
-        const remote = await logsApi.getAll();
-        await storage.setLogs(remote);
-        return remote;
+        const remote = (await logsApi.getAll()).map((l) => ({ ...l, ownerId: user?.id }));
+        const local = await storage.getLogs();
+        const merged = [...remote, ...local.filter((l) => !remote.some((r) => r.id === l.id))];
+        await storage.setLogs(merged);
+        return merged
+          .filter((l) => !l.ownerId || l.ownerId === user?.id)
+          .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
       } catch {
         // segue para local
       }
     }
     const local = await storage.getLogs();
-    return [...local].sort(
-      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-    );
+    return local
+      .filter((l) => !l.ownerId || l.ownerId === user?.id)
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   }
 
   async saveLog(log: WorkoutLog): Promise<WorkoutLog> {
+    const user = await storage.getUser();
+    const logWithOwner: WorkoutLog = { ...log, ownerId: log.ownerId ?? user?.id };
     if (logsApi.enabled()) {
       try {
-        const saved = await logsApi.create(log);
-        await this.upsertLocal(saved);
-        return saved;
+        const saved = await logsApi.create(logWithOwner);
+        const savedWithOwner: WorkoutLog = { ...saved, ownerId: user?.id };
+        await this.upsertLocal(savedWithOwner);
+        return savedWithOwner;
       } catch {
         // segue para local
       }
     }
     const list = await storage.getLogs();
-    const index = list.findIndex((l) => l.id === log.id);
+    const index = list.findIndex((l) => l.id === logWithOwner.id);
     if (index === -1) {
-      list.push(log);
+      list.push(logWithOwner);
     } else {
-      list[index] = log;
+      list[index] = logWithOwner;
     }
     await storage.setLogs(list);
-    return log;
+    return logWithOwner;
   }
 
   async getRecent(limit: number): Promise<WorkoutLog[]> {
@@ -99,7 +109,10 @@ export class WorkoutLogService {
   /** Sequência (Chama) respeitando a agenda de dias programados do usuário. */
   async getStreak(): Promise<number> {
     const list = await this.getAll();
-    const prefs = await storage.getTrainingPreferences<any>();
+    const user = await storage.getUser();
+    const prefs = user
+      ? await trainingPreferencesService.getFor(user.id)
+      : await storage.getTrainingPreferences<any>();
     return computeStreakFromLogs(list, prefs?.trainingDays);
   }
 

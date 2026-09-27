@@ -22,17 +22,26 @@ const CATEGORIES: AchievementCategory[] = [
   'Situações e Desafios',
 ];
 
+import { useAuth } from '../../auth/AuthContext';
+
 interface Props {
+  userId?: string;
   onSelectAchievement?: (achievement: Achievement, unlocked: boolean) => void;
 }
 
-export default function AchievementsShowcase({ onSelectAchievement }: Props) {
+export default function AchievementsShowcase({ userId, onSelectAchievement }: Props) {
+  const { user } = useAuth();
+  const effectiveUserId = userId ?? user?.id;
   const [unlockedList, setUnlockedList] = useState<UserAchievement[]>([]);
   const [selectedCat, setSelectedCat] = useState<AchievementCategory | 'TODAS'>('TODAS');
 
   useEffect(() => {
-    achievementService.getUserAchievements().then(setUnlockedList).catch(() => {});
-  }, []);
+    if (!effectiveUserId) {
+      setUnlockedList([]);
+      return;
+    }
+    achievementService.getUserAchievements(effectiveUserId).then(setUnlockedList).catch(() => {});
+  }, [effectiveUserId]);
 
   const unlockedMap = new Map(unlockedList.map((u) => [u.achievementId, u.unlockedAt]));
   const unlockedCount = unlockedMap.size;

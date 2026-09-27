@@ -139,6 +139,7 @@ export default function WorkoutCompleteScreen() {
                 /leg|agachamento|leg press|extensora|flexora|panturrilha|stiff|afundo|búlgaro/i.test(ex.exerciseName || ''),
             );
           const newUnlocked = await achievementService.evaluateOnWorkoutComplete({
+            userId: user?.id,
             allLogs,
             currentLog: lastLog,
             userPrefs: prefs,

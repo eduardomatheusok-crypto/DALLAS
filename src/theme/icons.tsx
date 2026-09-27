@@ -110,6 +110,8 @@ export const appIcons = {
   trendingUp: 'trending-up',
   time: 'time-outline',
   moon: 'moon-outline',
+  eye: 'eye-outline',
+  eyeOff: 'eye-off-outline',
 } satisfies Record<string, IconName>;
 
 export type AppIconName = keyof typeof appIcons;
