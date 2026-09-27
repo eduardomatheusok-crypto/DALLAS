@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,24 +12,20 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppTheme, spacing, borderRadius } from '../theme';
+import { colors, spacing, borderRadius } from '../theme';
 import { Icon } from '../theme/icons';
 import { userService } from '../services';
 import { useAuth } from '../auth/AuthContext';
-import { entryContent } from '../entry/entryContent';
+
+const logoImg = require('../../assets/images/dallas-icon-trans.png');
 
 interface Props {
   onBack: () => void;
   onCreateAccount: () => void;
 }
 
-/**
- * Tela de login do DALLAS (visual reformulado, mesma lógica de autenticação).
- * Criar conta agora acontece no onboarding — aqui fica só o acesso.
- */
 export default function LoginScreen({ onBack, onCreateAccount }: Props) {
   const insets = useSafeAreaInsets();
-  const { colors } = useAppTheme();
   const { refresh } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -50,214 +49,266 @@ export default function LoginScreen({ onBack, onCreateAccount }: Props) {
     }
   };
 
-  const { login } = entryContent;
-
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.root}
+    >
       {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top + spacing.md, backgroundColor: colors.background },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable
-            onPress={onBack}
-            hitSlop={8}
-            accessibilityLabel="Voltar"
-            style={({ pressed }) => [styles.backButton, { borderColor: colors.border }, pressed && styles.pressed]}
-          >
-            <Icon name="chevronLeft" size="sm" color={colors.text} />
-          </Pressable>
-          <Text style={[styles.brand, { color: colors.primary }]}>DALLAS</Text>
-        </View>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <Pressable
+          onPress={onBack}
+          hitSlop={12}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+        >
+          <Icon name="chevronLeft" size="sm" color={colors.white} />
+        </Pressable>
       </View>
 
-      {/* Form */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, spacing.xxxl) },
+          { paddingBottom: Math.max(insets.bottom + 20, 40) },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.intro}>
-          <Text style={[styles.title, { color: colors.text }]}>{login.title}</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {login.subtitle}
+        {/* Brand Section */}
+        <View style={styles.brandBox}>
+          <View style={styles.logoContainer}>
+            <View style={styles.radialGlow} />
+            <Image source={logoImg} style={styles.logo} resizeMode="contain" />
+          </View>
+          <Text style={styles.brandTitle}>DALLAS</Text>
+          <Text style={styles.screenHeading}>Acessar sua conta</Text>
+          <Text style={styles.screenSubtitle}>
+            Continue seu progresso e mantenha sua disciplina.
           </Text>
         </View>
 
+        {/* Error Banner */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Icon name="alert" size="xs" color="#FF1E27" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        {/* Form Fields */}
         <View style={styles.form}>
-          <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Nome de usuário</Text>
-          <TextInput
-            style={[
-              styles.input,
-              { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-            value={username}
-            onChangeText={setUsername}
-            placeholder={login.usernamePlaceholder}
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!loading}
-          />
+          <View style={styles.field}>
+            <Text style={styles.label}>NOME DE USUÁRIO</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Seu usuário"
+              placeholderTextColor="#636366"
+              value={username}
+              onChangeText={(t) => {
+                setUsername(t);
+                setError(null);
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
 
-          <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Senha</Text>
-          <TextInput
-            style={[
-              styles.input,
-              { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-            value={password}
-            onChangeText={setPassword}
-            placeholder={login.passwordPlaceholder}
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-            editable={!loading}
-          />
+          <View style={styles.field}>
+            <Text style={styles.label}>SENHA</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Sua senha"
+              placeholderTextColor="#636366"
+              value={password}
+              onChangeText={(t) => {
+                setPassword(t);
+                setError(null);
+              }}
+              secureTextEntry
+            />
+          </View>
 
-          {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
-
+          {/* Submit Button */}
           <Pressable
-            onPress={submit}
-            accessibilityRole="button"
-            disabled={loading}
             style={({ pressed }) => [
-              styles.enterButton,
-              { backgroundColor: colors.primary },
-              loading && styles.disabled,
+              styles.submitBtn,
+              loading && styles.submitBtnDisabled,
               pressed && styles.pressed,
             ]}
+            onPress={submit}
+            disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.enterText}>ENTRAR</Text>
+              <Text style={styles.submitBtnText}>ENTRAR</Text>
             )}
           </Pressable>
+        </View>
 
-          <Pressable
-            onPress={onCreateAccount}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.createButton,
-              { borderColor: colors.border },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={[styles.createText, { color: colors.text }]}>CRIAR CONTA</Text>
+        {/* Switch to Register */}
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>Ainda não tem conta?</Text>
+          <Pressable onPress={onCreateAccount} hitSlop={8}>
+            <Text style={styles.registerLink}>Criar conta</Text>
           </Pressable>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: '#070709',
   },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xs,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#121215',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  brand: {
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 3,
+    borderWidth: 1,
+    borderColor: '#242428',
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xxxl,
-    paddingTop: spacing.xxxl,
-    flexGrow: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
   },
-  intro: {
-    gap: spacing.sm,
-    marginBottom: spacing.xxxl,
+  brandBox: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
   },
-  title: {
-    fontSize: 30,
+  logoContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 90,
+    height: 90,
+    marginBottom: 8,
+  },
+  radialGlow: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 30, 39, 0.22)',
+    shadowColor: '#FF1E27',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 25,
+    elevation: 8,
+  },
+  logo: {
+    width: 64,
+    height: 64,
+  },
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 4,
+    marginBottom: 12,
+  },
+  screenHeading: {
+    fontSize: 22,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 21,
+  screenSubtitle: {
+    fontSize: 13,
+    color: '#8E8E93',
+    textAlign: 'center',
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 30, 39, 0.1)',
+    borderRadius: 14,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 30, 39, 0.3)',
+    marginBottom: spacing.lg,
+  },
+  errorText: {
+    flex: 1,
+    color: '#FF1E27',
+    fontSize: 13,
+    fontWeight: '500',
   },
   form: {
-    gap: spacing.sm,
+    gap: spacing.lg,
   },
-  fieldLabel: {
-    fontSize: 12,
+  field: {
+    gap: 6,
+  },
+  label: {
+    fontSize: 11,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.1,
-    marginTop: spacing.sm,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    height: 50,
-    fontSize: 15,
-  },
-  error: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: spacing.xs,
-  },
-  enterButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: borderRadius.md,
-    marginTop: spacing.xl,
-  },
-  enterText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-  },
-  createButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    marginTop: spacing.md,
-  },
-  createText: {
-    fontSize: 14,
-    fontWeight: '700',
+    color: '#8E8E93',
     letterSpacing: 1,
   },
-  disabled: {
-    opacity: 0.45,
+  input: {
+    backgroundColor: '#121215',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#242428',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: '#FFFFFF',
+    fontSize: 15,
+  },
+  submitBtn: {
+    backgroundColor: '#FF1E27',
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    shadowColor: '#FF1E27',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.xxl,
+  },
+  footerText: {
+    fontSize: 13,
+    color: '#8E8E93',
+  },
+  registerLink: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FF1E27',
   },
   pressed: {
-    opacity: 0.82,
+    opacity: 0.88,
+    transform: [{ scale: 0.99 }],
   },
 });

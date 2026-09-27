@@ -133,22 +133,28 @@ export default function ActiveExerciseDetailScreen() {
     if (!currentExec) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     toggleSetCompleted(currentExec.exerciseId, setId);
-    const set = currentExec.sets.find((s) => s.id === setId);
+    const setIndex = currentExec.sets.findIndex((s) => s.id === setId);
+    const set = setIndex >= 0 ? currentExec.sets[setIndex] : undefined;
     if (set && !set.completed) {
-      // Start rest timer
+      // Dispara o timer de descanso com contagem preparatória 3-2-1
+      const setNum = setIndex >= 0 ? setIndex + 1 : 1;
+      const restSec = currentExec.restSeconds && currentExec.restSeconds > 0 ? currentExec.restSeconds : 60;
       restTimer.start({
         id: `rest-${setId}`,
-        durationSeconds: 60,
+        durationSeconds: restSec,
         title: 'Descanso',
         subtitle: currentExec.exerciseName,
+        setNumber: setNum,
+        exerciseName: currentExec.exerciseName,
+        introSeconds: 3,
       });
     }
   };
 
   const handleConfirmFinishWorkout = async () => {
     setFinishModalVisible(false);
-    await finishSession();
-    navigation.navigate('MainTabs', { screen: 'Evolution' });
+    const payload = await finishSession();
+    navigation.navigate('WorkoutComplete', payload);
   };
 
   if (!currentExec) {
@@ -208,17 +214,23 @@ export default function ActiveExerciseDetailScreen() {
         </View>
       </View>
 
-      {/* Cronômetro Overlay */}
+      {/* Cronômetro Overlay com Modal 3-2-1 e Barra Minimizável */}
       {restTimer.active && restTimer.data ? (
         <RestTimerOverlay
           remainingMs={restTimer.remainingMs}
           totalMs={restTimer.totalMs}
           title={restTimer.data.title}
           subtitle={restTimer.data.subtitle}
+          phase={restTimer.phase}
+          introRemainingSeconds={restTimer.introRemainingSeconds}
+          setNumber={restTimer.data.setNumber}
+          exerciseName={restTimer.data.exerciseName}
           paused={restTimer.paused}
           onPause={restTimer.pause}
           onResume={restTimer.resume}
           onSkip={restTimer.skip}
+          onSkipIntro={restTimer.skipIntro}
+          onAddSeconds={restTimer.addSeconds}
         />
       ) : null}
 

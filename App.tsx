@@ -13,10 +13,45 @@ import { LoadingState } from './src/components/common';
 import Screen from './src/components/common/Screen';
 import { refreshApiStatus } from './src/api';
 
-function Root() {
-  const { authed, checking } = useAuth();
+import SplashScreen from './src/screens/entry/SplashScreen';
+import { trainingPreferencesService } from './src/services';
 
-  if (checking) {
+function Root() {
+  const { authed, checking, user } = useAuth();
+  const [splashDone, setSplashDone] = React.useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = React.useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    if (authed && user) {
+      setCheckingOnboarding(true);
+      trainingPreferencesService
+        .getFor(user.id)
+        .then((prefs) => {
+          if (!isMounted) return;
+          setHasCompletedOnboarding(prefs?.onboardingCompleted ?? false);
+          setCheckingOnboarding(false);
+        })
+        .catch(() => {
+          if (!isMounted) return;
+          setHasCompletedOnboarding(true);
+          setCheckingOnboarding(false);
+        });
+    } else {
+      setHasCompletedOnboarding(null);
+      setCheckingOnboarding(false);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [authed, user]);
+
+  if (!splashDone) {
+    return <SplashScreen onFinish={() => setSplashDone(true)} />;
+  }
+
+  if (checking || (authed && checkingOnboarding)) {
     return (
       <Screen>
         <LoadingState />
@@ -26,6 +61,10 @@ function Root() {
 
   if (!authed) {
     return <EntryFlow />;
+  }
+
+  if (hasCompletedOnboarding === false) {
+    return <EntryFlow initialScreen="onboarding" />;
   }
 
   return <RootNavigator />;

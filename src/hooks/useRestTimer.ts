@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RestTimer, type RestTimerReason } from '../services';
+import { RestTimer, type RestTimerReason, type RestTimerPhase } from '../services';
 
 /** Descrição de um intervalo de descanso que será exibido no app. */
 export interface RestIntervalData {
@@ -7,18 +7,23 @@ export interface RestIntervalData {
   durationSeconds: number;
   title: string;
   subtitle: string;
+  setNumber?: number;
+  exerciseName?: string;
+  introSeconds?: number;
 }
 
 export interface RestTimerUiState {
   active: boolean;
   paused: boolean;
+  phase: RestTimerPhase;
+  introRemainingSeconds: number;
   remainingMs: number;
   totalMs: number;
   progress: number;
   data: RestIntervalData | null;
 }
 
-const TICK_MS = 200;
+const TICK_MS = 150;
 
 /**
  * Hook que envolve o `RestTimer` (mecanismo reutilizável baseado em timestamps)
@@ -41,6 +46,8 @@ export function useRestTimer(
   const [ui, setUi] = useState<RestTimerUiState>({
     active: false,
     paused: false,
+    phase: 'idle',
+    introRemainingSeconds: 0,
     remainingMs: 0,
     totalMs: 0,
     progress: 0,
@@ -51,6 +58,8 @@ export function useRestTimer(
     setUi({
       active: timer.isActive,
       paused: timer.state === 'paused',
+      phase: timer.phase,
+      introRemainingSeconds: timer.introRemainingSeconds,
       remainingMs: timer.remainingMs,
       totalMs: timer.durationMs,
       progress: timer.progress(),
@@ -87,18 +96,20 @@ export function useRestTimer(
   const start = useCallback(
     (data: RestIntervalData) => {
       dataRef.current = data;
-      timer.start(data.durationSeconds);
+      timer.start(data.durationSeconds, data.introSeconds ?? 3);
     },
     [timer],
   );
 
+  const skipIntro = useCallback(() => timer.skipIntro(), [timer]);
   const pause = useCallback(() => timer.pause(), [timer]);
   const resume = useCallback(() => timer.resume(), [timer]);
   const skip = useCallback(() => timer.skip(), [timer]);
+  const addSeconds = useCallback((sec: number) => timer.addSeconds(sec), [timer]);
   const cancel = useCallback(() => {
     dataRef.current = null;
     timer.cancel();
   }, [timer]);
 
-  return { ...ui, start, pause, resume, skip, cancel };
+  return { ...ui, start, skipIntro, pause, resume, skip, addSeconds, cancel };
 }

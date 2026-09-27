@@ -1,38 +1,102 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { Screen } from '../components/common';
+import * as Haptics from 'expo-haptics';
+import {
+  AchievementsShowcase,
+  Button,
+  Screen,
+  UserAvatar,
+  PRESET_AVATARS,
+} from '../components/common';
 import { useUser, useWorkoutLogs } from '../hooks';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, borderRadius } from '../theme';
 import { Icon } from '../theme/icons';
-import { workoutLogService } from '../services';
+import {
+  achievementService,
+  communityService,
+  userService,
+  workoutLogService,
+  type Achievement,
+  type UserAchievement,
+} from '../services';
+import type { CommunityPost } from '../models/Post';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
+type ProfileTab = 'overview' | 'achievements';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
   const { user } = useUser();
   const { logout } = useAuth();
   const { logs } = useWorkoutLogs();
-  const [streak, setStreak] = useState(15);
+
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+  const [streak, setStreak] = useState(0);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  const [userAvatar, setUserAvatar] = useState<string | null>(user?.avatarUrl ?? null);
+
+  // Conquistas
+  const [unlockedCount, setUnlockedCount] = useState(0);
+  const [selectedAchievement, setSelectedAchievement] = useState<{
+    achievement: Achievement;
+    unlocked: boolean;
+    unlockedAt?: string;
+  } | null>(null);
+
+  // Minhas postagens
+  const [myPosts, setMyPosts] = useState<CommunityPost[]>([]);
 
   useEffect(() => {
-    workoutLogService.getStreak().then((s) => {
-      if (s > 0) setStreak(s);
+    if (user?.avatarUrl) {
+      setUserAvatar(user.avatarUrl);
+    }
+  }, [user?.avatarUrl]);
+
+  useEffect(() => {
+    workoutLogService.getStreak().then(setStreak).catch(() => {});
+    achievementService.getUserAchievements().then((list) => {
+      setUnlockedCount(list.length);
     }).catch(() => {});
-  }, [logs.length]);
+
+    const handle = user?.username ? user.username : 'eduardo';
+    communityService.getUserPosts(handle).then(setMyPosts).catch(() => {});
+  }, [logs.length, user?.username]);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Eduardo';
-  const totalVolume = logs.reduce((acc, l) => acc + l.totalVolume, 0) || 8240;
-  const totalWorkouts = logs.length > 0 ? logs.length : 12;
+  const totalVolume = logs.reduce((acc, l) => acc + l.totalVolume, 0);
+  const totalWorkouts = logs.length;
 
   const volumeDisplay =
     totalVolume >= 1000
       ? `${(totalVolume).toLocaleString('pt-BR')} kg`
       : `${totalVolume} kg`;
+
+  const handleSelectAvatar = async (uri: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setUserAvatar(uri);
+    await userService.updateProfile({ avatarUrl: uri });
+    setAvatarModalOpen(false);
+  };
+
+  const handleSaveCustomAvatar = async () => {
+    if (!customAvatarUrl.trim()) return;
+    await handleSelectAvatar(customAvatarUrl.trim());
+    setCustomAvatarUrl('');
+  };
 
   return (
     <Screen scroll style={styles.screen}>
@@ -50,81 +114,324 @@ export default function ProfileScreen() {
 
       {/* User Card */}
       <View style={styles.userSection}>
-        <View style={styles.avatarRing}>
-          <View style={styles.avatarInner}>
-            <Text style={styles.avatarLetter}>{firstName.charAt(0)}</Text>
+        <Pressable
+          style={styles.avatarTouchable}
+          onPress={() => setAvatarModalOpen(true)}
+        >
+          <View style={styles.avatarRing}>
+            <UserAvatar
+              avatarUrl={userAvatar}
+              name={firstName}
+              size={76}
+            />
           </View>
-        </View>
+          <View style={styles.avatarEditBadge}>
+            <Icon name="camera" size="xs" color={colors.white} />
+          </View>
+        </Pressable>
 
         <Text style={styles.userName}>{firstName}</Text>
-        <Text style={styles.userHandle}>@{firstName.toLowerCase()}</Text>
-        <Text style={styles.userBio}>Focado no progresso diário. 💪</Text>
+        <Text style={styles.userHandle}>
+          @{user?.username ? user.username.toLowerCase() : firstName.toLowerCase()}
+        </Text>
+        <Text style={styles.userBio}>Focado no progresso diário. BUILD YOUR BEST. 💪</Text>
       </View>
 
-      {/* 3 Metric Cards */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{totalWorkouts}</Text>
-          <Text style={styles.statLabel}>Treinos</Text>
-        </View>
+      {/* Segmented Tabs: Visão Geral | Vitrine de Conquistas */}
+      <View style={styles.tabBar}>
+        <Pressable
+          style={[styles.tabButton, activeTab === 'overview' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('overview')}
+        >
+          <Icon
+            name="profile"
+            size="xs"
+            color={activeTab === 'overview' ? colors.white : '#8E8E93'}
+          />
+          <Text
+            style={[styles.tabButtonText, activeTab === 'overview' && styles.tabButtonTextActive]}
+          >
+            Visão Geral
+          </Text>
+        </Pressable>
 
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{volumeDisplay}</Text>
-          <Text style={styles.statLabel}>Volume total</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{streak}</Text>
-          <Text style={styles.statLabel}>Dias seguidos</Text>
-        </View>
+        <Pressable
+          style={[styles.tabButton, activeTab === 'achievements' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('achievements')}
+        >
+          <Icon
+            name="trophy"
+            size="xs"
+            color={activeTab === 'achievements' ? '#FF1E27' : '#8E8E93'}
+          />
+          <Text
+            style={[
+              styles.tabButtonText,
+              activeTab === 'achievements' && styles.tabButtonTextActive,
+            ]}
+          >
+            Conquistas ({unlockedCount}/16)
+          </Text>
+        </Pressable>
       </View>
 
-      {/* Navigation Options List */}
-      <View style={styles.menuCard}>
-        <MenuItem
-          icon="dumbbell"
-          title="Meus treinos"
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Workouts' })}
-        />
-        <View style={styles.divider} />
+      {activeTab === 'overview' ? (
+        <View>
+          {/* 3 Metric Cards */}
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{totalWorkouts}</Text>
+              <Text style={styles.statLabel}>Treinos</Text>
+            </View>
 
-        <MenuItem
-          icon="trendUp"
-          title="Estatísticas"
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' })}
-        />
-        <View style={styles.divider} />
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{volumeDisplay}</Text>
+              <Text style={styles.statLabel}>Volume total</Text>
+            </View>
 
-        <MenuItem
-          icon="target"
-          title="Metas"
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' })}
-        />
-        <View style={styles.divider} />
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{streak}</Text>
+              <Text style={styles.statLabel}>Treinos seguidos</Text>
+            </View>
+          </View>
 
-        <MenuItem
-          icon="trophy"
-          title="Conquistas"
-          badge="3"
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' })}
-        />
-        <View style={styles.divider} />
+          {/* Minhas Publicações na Comunidade */}
+          <View style={styles.myPostsSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Minhas Publicações</Text>
+              <Pressable
+                onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })}
+              >
+                <Text style={styles.seeAllText}>Ir para feed</Text>
+              </Pressable>
+            </View>
 
-        <MenuItem
-          icon="settings"
-          title="Configurações"
-          onPress={() => navigation.navigate('Settings')}
-        />
-      </View>
+            {myPosts.length === 0 ? (
+              <View style={styles.emptyPostsCard}>
+                <Icon name="chat" size="md" color="#8E8E93" />
+                <Text style={styles.emptyPostsTitle}>Nenhuma publicação ainda</Text>
+                <Text style={styles.emptyPostsDesc}>
+                  Compartilhe suas vitórias, PRs e rotinas com outros atletas DALLAS.
+                </Text>
+                <Pressable
+                  style={styles.createPostBtn}
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })}
+                >
+                  <Text style={styles.createPostBtnText}>Compartilhar no Feed</Text>
+                </Pressable>
+              </View>
+            ) : (
+              myPosts.map((p) => (
+                <View key={p.id} style={styles.myPostCard}>
+                  <Text style={styles.myPostText}>{p.text}</Text>
+                  <View style={styles.myPostFooter}>
+                    {p.workoutTag ? (
+                      <View style={styles.myPostTag}>
+                        <Text style={styles.myPostTagText}>{p.workoutTag}</Text>
+                      </View>
+                    ) : <View />}
+                    <View style={styles.myPostStats}>
+                      <Icon name="heartFill" size="xs" color="#FF1E27" />
+                      <Text style={styles.myPostStatText}>{p.likes}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
 
-      {/* Logout Button */}
-      <Pressable
-        style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]}
-        onPress={() => logout()}
+          {/* Navigation Options List */}
+          <View style={styles.menuCard}>
+            <MenuItem
+              icon="dumbbell"
+              title="Meus treinos"
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Workouts' })}
+            />
+            <View style={styles.divider} />
+
+            <MenuItem
+              icon="trendUp"
+              title="Estatísticas e Gráficos"
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' })}
+            />
+            <View style={styles.divider} />
+
+            <MenuItem
+              icon="target"
+              title="Metas de Carga e Volume"
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' })}
+            />
+            <View style={styles.divider} />
+
+            <MenuItem
+              icon="settings"
+              title="Configurações e Lembretes"
+              onPress={() => navigation.navigate('Settings')}
+            />
+          </View>
+
+          {/* Logout Button */}
+          <Pressable
+            style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]}
+            onPress={() => logout()}
+          >
+            <Icon name="lock" size={16} color="#FF3B30" />
+            <Text style={styles.logoutText}>Sair da conta</Text>
+          </Pressable>
+        </View>
+      ) : (
+        /* Vitrine de Conquistas Tab */
+        <View style={styles.showcaseWrap}>
+          <AchievementsShowcase
+            onSelectAchievement={(ach, unlocked) => {
+              setSelectedAchievement({ achievement: ach, unlocked });
+            }}
+          />
+        </View>
+      )}
+
+      {/* Modal: Seletor de Foto / Avatar */}
+      <Modal
+        visible={avatarModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAvatarModalOpen(false)}
       >
-        <Icon name="lock" size={16} color="#FF3B30" />
-        <Text style={styles.logoutText}>Sair da conta</Text>
-      </Pressable>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setAvatarModalOpen(false)}
+        >
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.sheetTitle}>Escolha seu Avatar</Text>
+            <Text style={styles.sheetSubtitle}>
+              Selecione um dos avatares oficiais DALLAS ou insira um link:
+            </Text>
+
+            <View style={styles.presetsGrid}>
+              {PRESET_AVATARS.map((preset) => {
+                const isSelected = userAvatar === preset.uri;
+                return (
+                  <Pressable
+                    key={preset.id}
+                    style={[styles.presetItem, isSelected && styles.presetItemSelected]}
+                    onPress={() => handleSelectAvatar(preset.uri)}
+                  >
+                    <UserAvatar avatarUrl={preset.uri} name={preset.label} size={54} />
+                    <Text
+                      style={[styles.presetLabel, isSelected && styles.presetLabelSelected]}
+                    >
+                      {preset.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={styles.customUrlRow}>
+              <TextInput
+                style={styles.customUrlInput}
+                placeholder="Ou cole a URL da sua foto..."
+                placeholderTextColor="#71717A"
+                value={customAvatarUrl}
+                onChangeText={setCustomAvatarUrl}
+                autoCapitalize="none"
+              />
+              <Pressable
+                style={styles.customUrlBtn}
+                onPress={handleSaveCustomAvatar}
+              >
+                <Icon name="checkCircle" size="sm" color={colors.white} />
+              </Pressable>
+            </View>
+
+            <Button
+              title="Fechar"
+              variant="secondary"
+              onPress={() => setAvatarModalOpen(false)}
+              style={{ marginTop: spacing.md }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Modal: Detalhe da Conquista */}
+      <Modal
+        visible={selectedAchievement !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedAchievement(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setSelectedAchievement(null)}
+        >
+          <Pressable style={styles.achievementDetailCard} onPress={(e) => e.stopPropagation()}>
+            {selectedAchievement ? (
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={[
+                    styles.achievementDetailIconWrap,
+                    selectedAchievement.unlocked && styles.achievementDetailIconUnlocked,
+                  ]}
+                >
+                  <Icon
+                    name={selectedAchievement.achievement.icon as any}
+                    size="lg"
+                    color={selectedAchievement.unlocked ? '#FF1E27' : '#71717A'}
+                  />
+                </View>
+
+                <View style={styles.achievementCategoryBadge}>
+                  <Text style={styles.achievementCategoryText}>
+                    {selectedAchievement.achievement.category}
+                  </Text>
+                </View>
+
+                <Text style={styles.achievementDetailTitle}>
+                  {selectedAchievement.achievement.name}
+                </Text>
+
+                <Text style={styles.achievementDetailDesc}>
+                  {selectedAchievement.achievement.triggerDescription}
+                </Text>
+
+                <View
+                  style={[
+                    styles.statusBadge,
+                    selectedAchievement.unlocked
+                      ? styles.statusBadgeUnlocked
+                      : styles.statusBadgeLocked,
+                  ]}
+                >
+                  <Icon
+                    name={selectedAchievement.unlocked ? 'checkCircle' : 'lock'}
+                    size="xs"
+                    color={selectedAchievement.unlocked ? '#22C55E' : '#A1A1AA'}
+                  />
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      selectedAchievement.unlocked
+                        ? { color: '#22C55E' }
+                        : { color: '#A1A1AA' },
+                    ]}
+                  >
+                    {selectedAchievement.unlocked
+                      ? 'Conquista Desbloqueada'
+                      : 'Bloqueada • Complete o desafio'}
+                  </Text>
+                </View>
+
+                <Button
+                  title="Fechar"
+                  onPress={() => setSelectedAchievement(null)}
+                  style={{ width: '100%', marginTop: spacing.lg }}
+                />
+              </View>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
@@ -192,35 +499,38 @@ const styles = StyleSheet.create({
   },
   userSection: {
     alignItems: 'center',
-    marginVertical: spacing.lg,
+    marginVertical: spacing.md,
+  },
+  avatarTouchable: {
+    position: 'relative',
+    marginBottom: spacing.sm,
   },
   avatarRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     borderWidth: 2,
     borderColor: '#FF1E27',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#FF1E27',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 8,
-    marginBottom: spacing.md,
   },
-  avatarInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#1C1C20',
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FF1E27',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarLetter: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.white,
+    borderWidth: 2,
+    borderColor: '#0A0A0C',
   },
   userName: {
     fontSize: 20,
@@ -239,6 +549,38 @@ const styles = StyleSheet.create({
     color: '#D4D4D8',
     marginTop: 6,
     fontWeight: '500',
+    textAlign: 'center',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    backgroundColor: '#141416',
+    borderRadius: borderRadius.md,
+    padding: 4,
+    marginVertical: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#242428',
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: borderRadius.sm,
+  },
+  tabButtonActive: {
+    backgroundColor: '#24242A',
+  },
+  tabButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  tabButtonTextActive: {
+    color: colors.white,
+    fontWeight: '700',
   },
   statsRow: {
     flexDirection: 'row',
@@ -264,6 +606,101 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#8E8E93',
     marginTop: 4,
+    fontWeight: '600',
+  },
+  myPostsSection: {
+    marginBottom: spacing.xl,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  seeAllText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF1E27',
+  },
+  emptyPostsCard: {
+    backgroundColor: '#141416',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#242428',
+    padding: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  emptyPostsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+    marginTop: spacing.xs,
+  },
+  emptyPostsDesc: {
+    fontSize: 12,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: spacing.sm,
+  },
+  createPostBtn: {
+    backgroundColor: 'rgba(255, 30, 39, 0.15)',
+    borderWidth: 1,
+    borderColor: '#FF1E27',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  createPostBtnText: {
+    color: '#FF1E27',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  myPostCard: {
+    backgroundColor: '#141416',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#242428',
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  myPostText: {
+    fontSize: 13,
+    color: '#E4E4E7',
+    lineHeight: 18,
+    marginBottom: spacing.xs,
+  },
+  myPostFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  myPostTag: {
+    backgroundColor: 'rgba(255, 30, 39, 0.1)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  myPostTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FF1E27',
+  },
+  myPostStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  myPostStatText: {
+    fontSize: 12,
+    color: '#8E8E93',
     fontWeight: '600',
   },
   menuCard: {
@@ -332,5 +769,158 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  showcaseWrap: {
+    paddingBottom: 60,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#141416',
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    borderTopWidth: 1,
+    borderColor: '#242428',
+    padding: spacing.lg,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.white,
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  presetsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  presetItem: {
+    alignItems: 'center',
+    gap: 6,
+    padding: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    minWidth: 70,
+  },
+  presetItemSelected: {
+    borderColor: '#FF1E27',
+    backgroundColor: 'rgba(255, 30, 39, 0.1)',
+  },
+  presetLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  presetLabelSelected: {
+    color: '#FF1E27',
+    fontWeight: '700',
+  },
+  customUrlRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  customUrlInput: {
+    flex: 1,
+    backgroundColor: '#1C1C20',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    color: colors.white,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#2E2E34',
+  },
+  customUrlBtn: {
+    backgroundColor: '#FF1E27',
+    width: 42,
+    height: 42,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  achievementDetailCard: {
+    backgroundColor: '#141416',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#242428',
+    padding: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginBottom: 'auto',
+    marginTop: 'auto',
+  },
+  achievementDetailIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#1F1F24',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  achievementDetailIconUnlocked: {
+    backgroundColor: 'rgba(255, 30, 39, 0.15)',
+    borderWidth: 1,
+    borderColor: '#FF1E27',
+  },
+  achievementCategoryBadge: {
+    backgroundColor: '#202024',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  achievementCategoryText: {
+    color: '#A1A1AA',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  achievementDetailTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  achievementDetailDesc: {
+    fontSize: 13,
+    color: '#D4D4D8',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: spacing.md,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  statusBadgeUnlocked: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.25)',
+  },
+  statusBadgeLocked: {
+    backgroundColor: '#1C1C20',
+    borderWidth: 1,
+    borderColor: '#2A2A30',
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

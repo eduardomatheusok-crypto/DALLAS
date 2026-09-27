@@ -20,6 +20,7 @@ import { Icon } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
 import { formatDate, formatDuration, workoutLogService, findExerciseByIdOrName } from '../services';
 import type { WorkoutLog } from '../models';
+import DallasMascotCard from '../components/mascot/DallasMascotCard';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 type ProgressPeriod = 'semana' | 'mes' | 'ano';
@@ -159,6 +160,18 @@ export default function HomeScreen() {
 
   const recentLogs = useMemo(() => logs.slice(0, 4), [logs]);
 
+  const hasTrainedToday = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return logs.some((l) => l.startedAt.slice(0, 10) === todayStr);
+  }, [logs]);
+
+  const daysSinceLastWorkout = useMemo(() => {
+    if (logs.length === 0) return 99;
+    const last = new Date(logs[0].startedAt);
+    const now = new Date();
+    return Math.max(0, Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24)));
+  }, [logs]);
+
   return (
     <ScrollView
       style={styles.container}
@@ -260,26 +273,21 @@ export default function HomeScreen() {
             </Card>
           )}
 
-          {/* Banner Compacto de Sequência / Streak */}
-          <Pressable
-            style={({ pressed }) => [styles.streakCard, pressed && styles.pressed]}
-            onPress={() => navigation.navigate('MainTabs', { screen: 'Evolution' } as any)}
-          >
-            <View style={styles.streakIconWrap}>
-              <Icon name="flame" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.streakTextWrap}>
-              <Text style={styles.streakTitle}>
-                {streak > 0
-                  ? `${streak} ${streak === 1 ? 'dia seguido' : 'dias seguidos'}`
-                  : 'Comece sua sequência'}
-              </Text>
-              <Text style={styles.streakSubtitle}>
-                Continue treinando para manter sua sequência!
-              </Text>
-            </View>
-            <Icon name="chevronRight" size={16} color="#71717A" />
-          </Pressable>
+          {/* Card do Mascote Dallas & Streak da Agenda */}
+          <View style={{ marginBottom: spacing.md }}>
+            <DallasMascotCard
+              streak={streak}
+              hasTrainedToday={hasTrainedToday}
+              daysSinceLastWorkout={daysSinceLastWorkout}
+              onPressAction={() => {
+                if (todayWorkout) {
+                  navigation.navigate('WorkoutDetail', { workoutId: todayWorkout.id });
+                } else {
+                  navigation.navigate('WorkoutForm', {});
+                }
+              }}
+            />
+          </View>
 
           {/* Seção: SEU PROGRESSO */}
           <View style={styles.sectionContainer}>

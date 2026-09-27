@@ -75,19 +75,116 @@ const INITIAL_POSTS: CommunityPost[] = [
   },
 ];
 
+const BLOCKED_USERS_KEY = '@dallas/blocked_users';
+const HIDDEN_POSTS_KEY = '@dallas/hidden_posts';
+const REPORTED_POSTS_KEY = '@dallas/reported_posts';
+
 export class CommunityService {
+  async getBlockedUsers(): Promise<string[]> {
+    try {
+      const raw = await AsyncStorage.getItem(BLOCKED_USERS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async blockUser(userHandle: string): Promise<boolean> {
+    try {
+      const current = await this.getBlockedUsers();
+      if (!current.includes(userHandle)) {
+        current.push(userHandle);
+        await AsyncStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(current));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async unblockUser(userHandle: string): Promise<boolean> {
+    try {
+      const current = await this.getBlockedUsers();
+      const updated = current.filter((u) => u !== userHandle);
+      await AsyncStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(updated));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async getHiddenPostIds(): Promise<string[]> {
+    try {
+      const raw = await AsyncStorage.getItem(HIDDEN_POSTS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async hidePost(postId: string): Promise<boolean> {
+    try {
+      const current = await this.getHiddenPostIds();
+      if (!current.includes(postId)) {
+        current.push(postId);
+        await AsyncStorage.setItem(HIDDEN_POSTS_KEY, JSON.stringify(current));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async reportPost(postId: string, reason: string): Promise<boolean> {
+    try {
+      const raw = await AsyncStorage.getItem(REPORTED_POSTS_KEY);
+      const reports: { postId: string; reason: string; date: string }[] = raw ? JSON.parse(raw) : [];
+      reports.push({ postId, reason, date: new Date().toISOString() });
+      await AsyncStorage.setItem(REPORTED_POSTS_KEY, JSON.stringify(reports));
+      // Automatically hide from user's view
+      await this.hidePost(postId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async getPosts(tab: 'for_you' | 'following'): Promise<CommunityPost[]> {
     try {
+      const [blocked, hidden] = await Promise.all([
+        this.getBlockedUsers(),
+        this.getHiddenPostIds(),
+      ]);
+
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      let all: CommunityPost[] = [];
       if (!raw) {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_POSTS));
-        return INITIAL_POSTS.filter((p) => tab === 'for_you' || p.tab === tab);
+        all = INITIAL_POSTS;
+      } else {
+        all = JSON.parse(raw);
       }
-      const all: CommunityPost[] = JSON.parse(raw);
-      if (tab === 'for_you') return all;
-      return all.filter((p) => p.tab === 'following' || p.likes > 15);
+
+      // Filter blocked users and hidden posts
+      const visible = all.filter(
+        (p) => !blocked.includes(p.userHandle) && !hidden.includes(p.id),
+      );
+
+      if (tab === 'for_you') return visible;
+      return visible.filter((p) => p.tab === 'following' || p.likes > 15);
     } catch {
       return INITIAL_POSTS;
+    }
+  }
+
+  async getUserPosts(userHandle: string): Promise<CommunityPost[]> {
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const all: CommunityPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
+      const cleanHandle = userHandle.startsWith('@') ? userHandle : `@${userHandle}`;
+      return all.filter((p) => p.userHandle.toLowerCase() === cleanHandle.toLowerCase());
+    } catch {
+      return [];
     }
   }
 
@@ -131,14 +228,20 @@ export class CommunityService {
     return newComment;
   }
 
-  async createPost(text: string, imageUrl?: string, workoutTag?: string): Promise<CommunityPost> {
+  async createPost(
+    text: string,
+    imageUrl?: string,
+    workoutTag?: string,
+    author?: { name?: string; handle?: string; avatarUrl?: string },
+  ): Promise<CommunityPost> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     const posts: CommunityPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
 
     const newPost: CommunityPost = {
       id: `post-${Date.now()}`,
-      userName: 'Eduardo',
-      userHandle: '@eduardo',
+      userName: author?.name || 'Eduardo',
+      userHandle: author?.handle || '@eduardo',
+      userAvatar: author?.avatarUrl,
       text: text.trim(),
       imageUrl,
       workoutTag,
@@ -157,3 +260,4 @@ export class CommunityService {
 }
 
 export const communityService = new CommunityService();
+

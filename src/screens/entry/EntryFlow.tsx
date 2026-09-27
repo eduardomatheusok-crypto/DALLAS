@@ -47,8 +47,12 @@ function TransitionedScreen({ screen, children }: { screen: EntryScreen; childre
  * As telas alteram o estado de autenticação (login/registro) e o app troca
  * automaticamente para o RootNavigator/Home quando `authed` se torna true.
  */
-export default function EntryFlow() {
-  const [screen, setScreen] = useState<EntryScreen>('welcome');
+interface EntryFlowProps {
+  initialScreen?: EntryScreen;
+}
+
+export default function EntryFlow({ initialScreen = 'welcome' }: EntryFlowProps) {
+  const [screen, setScreen] = useState<EntryScreen>(initialScreen);
 
   return (
     <View style={styles.fill}>

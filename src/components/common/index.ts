@@ -14,5 +14,8 @@ export { default as MenuSheet } from './MenuSheet';
 export { default as GradientButton } from './GradientButton';
 export { default as SegmentedTabs } from './SegmentedTabs';
 export { Stepper } from './Stepper';
+export { default as UserAvatar, PRESET_AVATARS } from './UserAvatar';
+export { default as AchievementModal } from './AchievementModal';
+export { default as AchievementsShowcase } from './AchievementsShowcase';
 export { Icon } from '../../theme/icons';
 export { appIcons } from '../../theme/icons';

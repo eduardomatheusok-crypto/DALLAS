@@ -45,6 +45,7 @@ export const appIcons = {
   checkCircle: 'checkmark-circle',
   chevronRight: 'chevron-forward',
   chevronDown: 'chevron-down',
+  chevronUp: 'chevron-up',
   edit: 'create-outline',
   trash: 'trash-outline',
   notes: 'document-text-outline',
@@ -104,6 +105,11 @@ export const appIcons = {
   filter: 'filter-outline',
   backlog: 'list-outline',
   dumbbell: 'barbell-outline',
+  shield: 'shield-outline',
+  star: 'star-outline',
+  trendingUp: 'trending-up',
+  time: 'time-outline',
+  moon: 'moon-outline',
 } satisfies Record<string, IconName>;
 
 export type AppIconName = keyof typeof appIcons;

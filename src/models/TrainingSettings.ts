@@ -25,6 +25,18 @@ export interface TrainingSettings {
   reminderDays: WeekDay[];
   /** Horário do lembrete no formato "HH:mm". */
   reminderTime: string | null;
+  /** Horário habitual de treino no formato "HH:mm" (ex: "18:00"). */
+  habitualTrainingTime: string;
+  /** Lembrete T-2h: Preparatório leve (hidratação e refeição pré-treino). */
+  notifyTMinus2h: boolean;
+  /** Lembrete T-15m: Chamada curta pré-treino ("A barra tá te esperando"). */
+  notifyTMinus15m: boolean;
+  /** Lembrete T+30m: Cobrança com humor se ainda não iniciou o treino. */
+  notifyTPlus30m: boolean;
+  /** Lembrete Fim do dia: Alerta de streak em risco em dia programado. */
+  notifyEndOfDayStreakRisk: boolean;
+  /** Horário do lembrete de fim do dia ("HH:mm", ex: "21:00"). */
+  endOfDayTime: string;
   updatedAt: string;
 }
 
@@ -37,7 +49,13 @@ export const DEFAULT_TRAINING_SETTINGS: TrainingSettings = {
   vibrationEnabled: true,
   restEndNotificationEnabled: true,
   reminderDays: [],
-  reminderTime: null,
+  reminderTime: '18:00',
+  habitualTrainingTime: '18:00',
+  notifyTMinus2h: true,
+  notifyTMinus15m: true,
+  notifyTPlus30m: true,
+  notifyEndOfDayStreakRisk: true,
+  endOfDayTime: '21:00',
   updatedAt: new Date(0).toISOString(),
 };
 

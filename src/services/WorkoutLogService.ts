@@ -96,17 +96,11 @@ export class WorkoutLogService {
     return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
-  /** Sequência (Chama) de dias consecutivos com treino concluído. Usa a API quando online. */
+  /** Sequência (Chama) respeitando a agenda de dias programados do usuário. */
   async getStreak(): Promise<number> {
-    if (logsApi.enabled()) {
-      try {
-        return await logsApi.getStreak();
-      } catch {
-        // segue para derivação local
-      }
-    }
     const list = await this.getAll();
-    return computeStreakFromLogs(list);
+    const prefs = await storage.getTrainingPreferences<any>();
+    return computeStreakFromLogs(list, prefs?.trainingDays);
   }
 
   private async upsertLocal(saved: WorkoutLog): Promise<void> {
@@ -138,9 +132,77 @@ export class WorkoutLogService {
 
 export const workoutLogService = new WorkoutLogService();
 
-/** Deriva a sequência (Chama) de dias consecutivos a partir do histórico de logs. */
-export function computeStreakFromLogs(logs: Pick<WorkoutLog, 'startedAt'>[]): number {
+const JS_TO_WEEKDAY = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
+
+/**
+ * Deriva a sequência (Chama) respeitando a rotina do usuário:
+ * - Dias não selecionados são descanso programado e NÃO quebram a sequência.
+ * - Dia programado + treino realizado → mantém a sequência.
+ * - Dia não programado (descanso) → não quebra a sequência.
+ * - Dia programado no passado sem treino → quebra a sequência.
+ */
+export function computeStreakFromLogs(
+  logs: Pick<WorkoutLog, 'startedAt'>[],
+  trainingDays?: string[],
+): number {
   if (logs.length === 0) return 0;
+
+  // Conjunto de datas em formato YYYY-MM-DD em que houve treino
+  const trainedDates = new Set(
+    logs.map((l) => {
+      const d = new Date(l.startedAt);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }),
+  );
+
+  // Se o usuário tem dias programados definidos
+  if (trainingDays && trainingDays.length > 0) {
+    let streak = 0;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayWeekday = JS_TO_WEEKDAY[now.getDay()];
+    const todayIsScheduled = trainingDays.includes(todayWeekday);
+
+    // Se treinou hoje, já pontua
+    if (trainedDates.has(todayStr)) {
+      streak += 1;
+    }
+
+    // Agora varre os dias anteriores (ontem para trás)
+    const cursor = new Date(now);
+    cursor.setDate(cursor.getDate() - 1);
+
+    // Limite máximo de busca: 365 dias
+    for (let i = 0; i < 365; i++) {
+      const dateStr = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+      const weekday = JS_TO_WEEKDAY[cursor.getDay()];
+      const isScheduled = trainingDays.includes(weekday);
+      const hadWorkout = trainedDates.has(dateStr);
+
+      if (hadWorkout) {
+        // Treinou (seja dia programado ou dia extra)
+        streak += 1;
+      } else if (isScheduled) {
+        // Era dia de treino e não treinou no passado: quebra a sequência
+        break;
+      }
+      // Se era dia de descanso e não treinou, apenas continua retrocedendo (NÃO quebra a sequência!)
+
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return streak;
+  }
+
+  // Fallback clássico por dias consecutivos (para retrocompatibilidade)
   const days = Array.from(
     new Set(logs.map((l) => new Date(l.startedAt).toDateString())),
   ).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());

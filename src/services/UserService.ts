@@ -35,10 +35,21 @@ export class UserService {
     return !!token;
   }
 
-  async register(username: string, password: string): Promise<User> {
+  async register(username: string, password: string, avatarUrl?: string): Promise<User> {
     const { user } = await userApi.register(username, password);
+    if (avatarUrl) {
+      user.avatarUrl = avatarUrl;
+    }
     await storage.setUser(user);
     return user;
+  }
+
+  async updateProfile(updates: Partial<User>): Promise<User | null> {
+    const user = await storage.getUser();
+    if (!user) return null;
+    const updated = { ...user, ...updates };
+    await storage.setUser(updated);
+    return updated;
   }
 
   async login(username: string, password: string): Promise<User> {

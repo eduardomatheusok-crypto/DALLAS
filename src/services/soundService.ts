@@ -52,11 +52,30 @@ async function getNativePlayer() {
 }
 
 /**
+ * Feedback tátil em 3, 2, 1.
+ */
+export function playCountdownHaptic(seconds: number): void {
+  if (seconds >= 1 && seconds <= 3) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  }
+}
+
+/**
+ * Vibração dupla ao zerar o descanso.
+ */
+export function playTimerZeroVibration(): void {
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  setTimeout(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+  }, 180);
+}
+
+/**
  * Toca o som de término de série/timer e dispara feedback tátil.
  */
 export async function playTimerEndSound(): Promise<void> {
-  // Dispara feedback tátil imediato
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  // Dispara feedback tátil imediato com vibração dupla
+  playTimerZeroVibration();
 
   // Reprodução no Web via Web Audio API (sintetizador sem latência)
   if (Platform.OS === 'web') {

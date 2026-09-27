@@ -15,7 +15,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
-import { Button, EmptyState, LoadingState, Screen } from '../components/common';
+import { Button, EmptyState, LoadingState, Screen, UserAvatar } from '../components/common';
 import GroupCard from '../components/groups/GroupCard';
 import { useGroups, useUser } from '../hooks';
 import { groupService } from '../services';
@@ -41,6 +41,18 @@ export default function CommunityScreen() {
   const [composerText, setComposerText] = useState('');
   const [selectedPostForDetail, setSelectedPostForDetail] = useState<CommunityPost | null>(null);
   const [newCommentText, setNewCommentText] = useState('');
+
+  // Moderation state
+  const [moderationPost, setModerationPost] = useState<CommunityPost | null>(null);
+  const [moderationMode, setModerationMode] = useState<'options' | 'report' | 'block' | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((cur) => (cur === msg ? null : cur));
+    }, 3500);
+  };
 
   // Group join by code
   const [codeOpen, setCodeOpen] = useState(false);
@@ -76,9 +88,62 @@ export default function CommunityScreen() {
   const handleCreatePost = async () => {
     if (!composerText.trim()) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    const newPost = await communityService.createPost(composerText);
+    const newPost = await communityService.createPost(
+      composerText,
+      undefined,
+      undefined,
+      {
+        name: user?.name || 'Eduardo',
+        handle: user?.username ? `@${user.username}` : '@eduardo',
+        avatarUrl: user?.avatarUrl,
+      },
+    );
     setComposerText('');
     setPosts((prev) => [newPost, ...prev]);
+  };
+
+  const openModeration = (post: CommunityPost) => {
+    setModerationPost(post);
+    setModerationMode('options');
+  };
+
+  const handleReportPost = async (reason: string) => {
+    if (!moderationPost) return;
+    await communityService.reportPost(moderationPost.id, reason);
+    setPosts((prev) => prev.filter((p) => p.id !== moderationPost.id));
+    if (selectedPostForDetail?.id === moderationPost.id) {
+      setSelectedPostForDetail(null);
+    }
+    setModerationMode(null);
+    setModerationPost(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    showToast('Denúncia recebida. Nossa equipe analisará a publicação.');
+  };
+
+  const handleBlockUser = async () => {
+    if (!moderationPost) return;
+    const targetHandle = moderationPost.userHandle;
+    await communityService.blockUser(targetHandle);
+    setPosts((prev) => prev.filter((p) => p.userHandle !== targetHandle));
+    if (selectedPostForDetail?.userHandle === targetHandle) {
+      setSelectedPostForDetail(null);
+    }
+    setModerationMode(null);
+    setModerationPost(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    showToast(`Usuário ${targetHandle} foi bloqueado.`);
+  };
+
+  const handleHidePost = async () => {
+    if (!moderationPost) return;
+    await communityService.hidePost(moderationPost.id);
+    setPosts((prev) => prev.filter((p) => p.id !== moderationPost.id));
+    if (selectedPostForDetail?.id === moderationPost.id) {
+      setSelectedPostForDetail(null);
+    }
+    setModerationMode(null);
+    setModerationPost(null);
+    showToast('Publicação ocultada do seu feed.');
   };
 
   const handleAddComment = async () => {
@@ -208,9 +273,7 @@ export default function CommunityScreen() {
             /* Post Composer Box */
             <View style={styles.composerCard}>
               <View style={styles.composerTop}>
-                <View style={styles.userAvatar}>
-                  <Text style={styles.avatarLetter}>E</Text>
-                </View>
+                <UserAvatar avatarUrl={user?.avatarUrl} name={user?.name || 'Eduardo'} size={38} />
                 <TextInput
                   style={styles.composerInput}
                   placeholder="No que você está pensando?"
@@ -253,13 +316,7 @@ export default function CommunityScreen() {
               {/* Post Header */}
               <View style={styles.postHeader}>
                 <View style={styles.postHeaderUser}>
-                  {item.userAvatar ? (
-                    <Image source={{ uri: item.userAvatar }} style={styles.postAvatar} />
-                  ) : (
-                    <View style={styles.postAvatarPlaceholder}>
-                      <Text style={styles.avatarLetter}>{item.userName.charAt(0)}</Text>
-                    </View>
-                  )}
+                  <UserAvatar avatarUrl={item.userAvatar} name={item.userName} size={40} />
                   <View>
                     <Text style={styles.postUserName}>{item.userName}</Text>
                     <Text style={styles.postUserHandle}>
@@ -268,7 +325,16 @@ export default function CommunityScreen() {
                   </View>
                 </View>
 
-                <Icon name="menuVertical" size="xs" color="#8E8E93" />
+                <Pressable
+                  style={styles.moreBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    openModeration(item);
+                  }}
+                  hitSlop={12}
+                >
+                  <Icon name="menuVertical" size="xs" color="#8E8E93" />
+                </Pressable>
               </View>
 
               {/* Post Body */}
@@ -352,7 +418,17 @@ export default function CommunityScreen() {
               <Icon name="chevronLeft" size="sm" color={colors.white} />
             </Pressable>
             <Text style={styles.modalHeaderTitle}>Postagem</Text>
-            <View style={{ width: 36 }} />
+            <Pressable
+              style={styles.modalBackBtn}
+              onPress={() => {
+                if (selectedPostForDetail) {
+                  openModeration(selectedPostForDetail);
+                }
+              }}
+              hitSlop={12}
+            >
+              <Icon name="menuVertical" size="xs" color={colors.white} />
+            </Pressable>
           </View>
 
           {selectedPostForDetail ? (
@@ -361,13 +437,11 @@ export default function CommunityScreen() {
               <View style={styles.modalPostContent}>
                 <View style={styles.postHeader}>
                   <View style={styles.postHeaderUser}>
-                    {selectedPostForDetail.userAvatar ? (
-                      <Image source={{ uri: selectedPostForDetail.userAvatar }} style={styles.postAvatar} />
-                    ) : (
-                      <View style={styles.postAvatarPlaceholder}>
-                        <Text style={styles.avatarLetter}>{selectedPostForDetail.userName.charAt(0)}</Text>
-                      </View>
-                    )}
+                    <UserAvatar
+                      avatarUrl={selectedPostForDetail.userAvatar}
+                      name={selectedPostForDetail.userName}
+                      size={40}
+                    />
                     <View>
                       <Text style={styles.postUserName}>{selectedPostForDetail.userName}</Text>
                       <Text style={styles.postUserHandle}>
@@ -493,6 +567,153 @@ export default function CommunityScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Toast Notification */}
+      {toastMessage ? (
+        <View style={styles.toastBanner}>
+          <Icon name="checkCircle" size="xs" color="#22C55E" />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      ) : null}
+
+      {/* Modal: Moderação de Post / Usuário */}
+      <Modal
+        visible={moderationMode !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setModerationMode(null);
+          setModerationPost(null);
+        }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            setModerationMode(null);
+            setModerationPost(null);
+          }}
+        >
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            {moderationMode === 'options' ? (
+              <View>
+                <Text style={styles.sheetTitle}>Opções da publicação</Text>
+                <Text style={styles.sheetSubtitle}>
+                  Post de {moderationPost?.userName} ({moderationPost?.userHandle})
+                </Text>
+
+                <Pressable
+                  style={styles.moderationOptionBtn}
+                  onPress={() => setModerationMode('report')}
+                >
+                  <Icon name="warning" size="sm" color="#FF4D4D" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.moderationOptionTitle}>Denunciar publicação</Text>
+                    <Text style={styles.moderationOptionDesc}>
+                      Reportar spam, conteúdo impróprio ou ofensivo
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <View style={styles.divider} />
+
+                <Pressable
+                  style={styles.moderationOptionBtn}
+                  onPress={() => setModerationMode('block')}
+                >
+                  <Icon name="lock" size="sm" color="#FF8C00" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.moderationOptionTitle}>
+                      Bloquear {moderationPost?.userHandle}
+                    </Text>
+                    <Text style={styles.moderationOptionDesc}>
+                      Ocultar todas as postagens deste usuário
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <View style={styles.divider} />
+
+                <Pressable
+                  style={styles.moderationOptionBtn}
+                  onPress={handleHidePost}
+                >
+                  <Icon name="close" size="sm" color="#A1A1AA" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.moderationOptionTitle}>Ocultar esta postagem</Text>
+                    <Text style={styles.moderationOptionDesc}>
+                      Remover este card do seu feed
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <Button
+                  title="Cancelar"
+                  variant="secondary"
+                  onPress={() => {
+                    setModerationMode(null);
+                    setModerationPost(null);
+                  }}
+                  style={{ marginTop: spacing.md }}
+                />
+              </View>
+            ) : moderationMode === 'report' ? (
+              <View>
+                <Text style={styles.sheetTitle}>Motivo da denúncia</Text>
+                <Text style={styles.sheetSubtitle}>
+                  Selecione o motivo para análise da moderação DALLAS:
+                </Text>
+
+                {[
+                  'Spam ou publicidade não autorizada',
+                  'Conteúdo ofensivo ou discurso de ódio',
+                  'Desinformação sobre treino ou saúde',
+                  'Assédio ou comportamento inadequado',
+                  'Outro motivo',
+                ].map((reason) => (
+                  <Pressable
+                    key={reason}
+                    style={styles.reportReasonRow}
+                    onPress={() => handleReportPost(reason)}
+                  >
+                    <Text style={styles.reportReasonText}>{reason}</Text>
+                    <Icon name="chevronRight" size="xs" color="#71717A" />
+                  </Pressable>
+                ))}
+
+                <Button
+                  title="Voltar"
+                  variant="secondary"
+                  onPress={() => setModerationMode('options')}
+                  style={{ marginTop: spacing.md }}
+                />
+              </View>
+            ) : moderationMode === 'block' ? (
+              <View>
+                <Text style={[styles.sheetTitle, { color: '#FF4D4D' }]}>
+                  Bloquear {moderationPost?.userHandle}?
+                </Text>
+                <Text style={styles.sheetSubtitle}>
+                  Você deixará de ver publicações e comentários deste usuário no feed da Comunidade DALLAS.
+                </Text>
+
+                <View style={styles.modalActions}>
+                  <Button
+                    title="Cancelar"
+                    variant="secondary"
+                    onPress={() => setModerationMode('options')}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title="Bloquear"
+                    onPress={handleBlockUser}
+                    style={{ flex: 1, backgroundColor: '#FF1E27' }}
+                  />
+                </View>
+              </View>
+            ) : null}
+          </Pressable>
+        </Pressable>
       </Modal>
     </Screen>
   );
@@ -922,5 +1143,73 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  moreBtn: {
+    padding: spacing.xs,
+  },
+  toastBanner: {
+    position: 'absolute',
+    top: 50,
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: '#1C1C20',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#303036',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  toastText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    lineHeight: 18,
+  },
+  moderationOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  moderationOptionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  moderationOptionDesc: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  reportReasonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#202024',
+  },
+  reportReasonText: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#202024',
   },
 });

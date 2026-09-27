@@ -182,10 +182,16 @@ export default function ExerciseExecutionScreen() {
           totalMs={restTimer.totalMs}
           title={restTimer.data.title}
           subtitle={restTimer.data.subtitle}
+          phase={restTimer.phase}
+          introRemainingSeconds={restTimer.introRemainingSeconds}
+          setNumber={restTimer.data.setNumber}
+          exerciseName={restTimer.data.exerciseName}
           paused={restTimer.paused}
           onPause={restTimer.pause}
           onResume={restTimer.resume}
           onSkip={restTimer.skip}
+          onSkipIntro={restTimer.skipIntro}
+          onAddSeconds={restTimer.addSeconds}
         />
       ) : null}
 

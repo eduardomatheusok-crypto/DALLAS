@@ -94,6 +94,12 @@ export const storage = {
   async setThemeMode(mode: 'light' | 'dark' | 'system'): Promise<void> {
     return write(KEYS.themeMode, mode);
   },
+  async getCustom<T>(key: string, fallback: T = null as unknown as T): Promise<T> {
+    return read<T>(key, fallback);
+  },
+  async setCustom<T>(key: string, value: T): Promise<void> {
+    return write(key, value);
+  },
   async clear(): Promise<void> {
     await AsyncStorage.clear();
   },

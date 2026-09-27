@@ -62,12 +62,12 @@ export default function DallasMascotCard({
     ];
   } else {
     mood = 'base';
-    badgeText = streak > 0 ? `${streak} DIAS SEGUIDOS ⚡` : 'HORA DO TREINO ⚡';
+    badgeText = streak > 0 ? `${streak} ${streak === 1 ? 'TREINO NA SEQUÊNCIA' : 'TREINOS NA SEQUÊNCIA'} ⚡` : 'HORA DO TREINO ⚡';
     badgeColor = colors.primary;
-    title = streak > 0 ? 'Mantendo a sequência!' : 'Pronto para o treino?';
+    title = streak > 0 ? 'Compromisso em dia!' : 'Pronto para o treino?';
     quotes = [
       streak > 0
-        ? `Bora manter o streak de ${streak} dia(s)? Não quebre o ritmo!`
+        ? `Bora manter a chama de ${streak} treino(s) cumprido(s)? Não quebre o ritmo!`
         : 'Seu treino de hoje já está montado. Vamos lá!',
       'O único treino ruim é aquele que você não fez.',
       'Coloca o fone e vamos queimar calorias juntos!',
