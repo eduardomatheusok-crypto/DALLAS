@@ -101,55 +101,11 @@ export const TRAINING_EXPERIENCES: TrainingExperienceOption[] = [
 ];
 
 export const TRAINING_SPLITS: TrainingSplitOption[] = [
-  {
-    id: 'auto',
-    name: 'Deixar o DALLAS escolher por mim',
-    description: 'Seleção determinística baseada na sua frequência e perfil de treino.',
-    frequencies: [2, 3, 4, 5, 6],
-    recommended: true,
-  },
-  {
-    id: 'FULL_BODY_2X',
-    name: 'Full Body 2x',
-    description: 'Corpo inteiro trabalhado em 2 sessões semanais bem espaçadas.',
-    frequencies: [2],
-  },
-  {
-    id: 'FULL_BODY_3X',
-    name: 'Full Body 3x',
-    description: 'Corpo inteiro trabalhado em todas as sessões.',
-    frequencies: [3],
-  },
-  {
-    id: 'PPL_3X',
-    name: 'Push / Pull / Legs 1x',
-    description: 'Empurrar, puxar e pernas; 3 dias por semana.',
-    frequencies: [3],
-  },
-  {
-    id: 'UPPER_LOWER_4X',
-    name: 'Superior / Inferior 2x',
-    description: 'Membros superiores e inferiores intercalados; 4 dias.',
-    frequencies: [4],
-  },
-  {
-    id: 'ANTERIOR_POSTERIOR_4X',
-    name: 'Anterior / Posterior 2x',
-    description: 'Foco nas cadeias frontal e posterior; 4 dias.',
-    frequencies: [4],
-  },
-  {
-    id: 'PPL_UPPER_LOWER_5X',
-    name: 'PPL + Superior / Inferior',
-    description: 'Combinação balanceada de alta frequência para 5 dias.',
-    frequencies: [5],
-  },
-  {
-    id: 'PPL_6X',
-    name: 'Push / Pull / Legs 2x',
-    description: 'Frequência e intensidade altas, 6 dias.',
-    frequencies: [6],
-  },
+  { id: 'manual', name: 'Por mim', description: 'Quero montar meus próprios treinos. Nenhum treino será criado automaticamente.', frequencies: [2,3,4,5,6] },
+  { id: 'UPPER_LOWER_4X', name: 'Upper / Lower — 4 dias', description: 'Upper A, Lower A, Upper B e Lower B.', frequencies: [4] },
+  { id: 'ANTERIOR_POSTERIOR_4X', name: 'Anterior / Posterior — 4 dias', description: 'Cadeias frontal e posterior em quatro sessões.', frequencies: [4] },
+  { id: 'PPL_UPPER_LOWER_5X', name: 'PPLUL — 5 dias', description: 'Push, Pull, Legs, Upper e Lower.', frequencies: [5] },
+  { id: 'FULL_BODY_3X', name: 'Full Body — 3 dias', description: 'Corpo inteiro nas sessões A, B e C.', frequencies: [3] },
 ];
 
 export const TRAINING_LOCATIONS: TrainingLocationOption[] = [
@@ -181,6 +137,8 @@ export interface UserTrainingPreferences {
   exactFrequency?: ExactFrequency;
   trainingDays: WeekDay[];
   location?: TrainingLocation;
+  plannedSets?: number;
+  plannedReps?: number;
   preference?: TrainingPreference;
   assignedTemplateId?: string;
   onboardingCompleted?: boolean;

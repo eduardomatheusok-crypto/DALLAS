@@ -20,7 +20,7 @@ function workoutExercisePlanToDto(e: WorkoutExercisePlan) {
 export interface WorkoutsApi {
   getAll(): Promise<Workout[]>;
   getById(id: string): Promise<Workout | undefined>;
-  create(name: string, exercises: WorkoutExercisePlan[]): Promise<Workout>;
+  create(name: string, exercises: WorkoutExercisePlan[], id?: string): Promise<Workout>;
   update(id: string, name: string, exercises: WorkoutExercisePlan[]): Promise<Workout>;
   remove(id: string): Promise<void>;
   enabled(): boolean;
@@ -38,9 +38,9 @@ export const workoutsApi: WorkoutsApi = {
     const dto = await apiGet<WorkoutDto>(`/api/workouts/${id}`);
     return workoutFromDto(dto);
   },
-  async create(name, exercises) {
+  async create(name, exercises, id) {
     const dto = await apiPost<WorkoutDto>('/api/workouts', {
-      name, exercises: exercises.map((e) => workoutExercisePlanToDto(e)),
+      id, name, exercises: exercises.map((e) => workoutExercisePlanToDto(e)),
     });
     return workoutFromDto(dto);
   },

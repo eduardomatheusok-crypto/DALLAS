@@ -1,3 +1,4 @@
+import AvatarPicker from '../components/common/AvatarPicker';
 import React, { useEffect, useState } from 'react';
 import {
   Image,
@@ -17,7 +18,6 @@ import {
   Button,
   Screen,
   UserAvatar,
-  PRESET_AVATARS,
 } from '../components/common';
 import { useUser, useWorkoutLogs } from '../hooks';
 import { useAuth } from '../auth/AuthContext';
@@ -35,18 +35,21 @@ import type { CommunityPost } from '../models/Post';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
-type ProfileTab = 'overview' | 'achievements';
+type ProfileTab = 'posts' | 'achievements';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
   const { user } = useUser();
-  const { logout } = useAuth();
+  const { logout, refresh } = useAuth();
   const { logs } = useWorkoutLogs();
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+  const [isFollowing, setIsFollowing] = useState(false);
   const [streak, setStreak] = useState(0);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
-  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  const [draftAvatar, setDraftAvatar] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState('');
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(user?.avatarUrl ?? null);
 
   // Conquistas
@@ -79,23 +82,25 @@ export default function ProfileScreen() {
   const firstName = user?.name ? user.name.split(' ')[0] : 'Eduardo';
   const totalVolume = logs.reduce((acc, l) => acc + l.totalVolume, 0);
   const totalWorkouts = logs.length;
+  const athleteLevel = Math.max(1, Math.floor(totalWorkouts / 3) + 1);
 
   const volumeDisplay =
     totalVolume >= 1000
       ? `${(totalVolume).toLocaleString('pt-BR')} kg`
       : `${totalVolume} kg`;
 
-  const handleSelectAvatar = async (uri: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setUserAvatar(uri);
-    await userService.updateProfile({ avatarUrl: uri });
-    setAvatarModalOpen(false);
-  };
-
-  const handleSaveCustomAvatar = async () => {
-    if (!customAvatarUrl.trim()) return;
-    await handleSelectAvatar(customAvatarUrl.trim());
-    setCustomAvatarUrl('');
+  const handleSaveAvatar = async () => {
+    if (!draftAvatar || savingAvatar) return;
+    setSavingAvatar(true);
+    setAvatarError('');
+    try {
+      const updated = await userService.updateProfile({ avatarUrl: draftAvatar });
+      if (!updated) throw new Error('Usuário não encontrado');
+      setUserAvatar(updated.avatarUrl ?? null);
+      await refresh();
+      setAvatarModalOpen(false);
+    } catch { setAvatarError('Não foi possível salvar a foto. Tente novamente.'); }
+    finally { setSavingAvatar(false); }
   };
 
   return (
@@ -115,8 +120,10 @@ export default function ProfileScreen() {
       {/* User Card */}
       <View style={styles.userSection}>
         <Pressable
+          accessibilityLabel="Editar foto de perfil"
+          accessibilityRole="button"
           style={styles.avatarTouchable}
-          onPress={() => setAvatarModalOpen(true)}
+          onPress={() => { setDraftAvatar(userAvatar); setAvatarError(''); setAvatarModalOpen(true); }}
         >
           <View style={styles.avatarRing}>
             <UserAvatar
@@ -135,23 +142,65 @@ export default function ProfileScreen() {
           @{user?.username ? user.username.toLowerCase() : firstName.toLowerCase()}
         </Text>
         <Text style={styles.userBio}>Focado no progresso diário. BUILD YOUR BEST. 💪</Text>
+
+        {/* Botão Seguir / Seguindo */}
+        <View style={styles.followRow}>
+          <Pressable
+            style={[styles.followBtn, isFollowing && styles.followingBtn]}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              setIsFollowing((prev) => !prev);
+            }}
+          >
+            <Icon
+              name={isFollowing ? 'check' : 'plus'}
+              size={12}
+              color={isFollowing ? '#A1A1AA' : '#FFFFFF'}
+            />
+            <Text style={[styles.followBtnText, isFollowing && styles.followingBtnText]}>
+              {isFollowing ? 'Seguindo' : 'Seguir'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
-      {/* Segmented Tabs: Visão Geral | Vitrine de Conquistas */}
+      {/* Painel de Status com Nível, Streak e Conquistas Desbloqueadas */}
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>Nível {athleteLevel}</Text>
+          <Text style={styles.statLabel}>Nível</Text>
+        </View>
+
+        <View style={styles.statCard}>
+          <Text style={[styles.statNumber, { color: '#FF1E27' }]}>
+            {streak} {streak === 1 ? 'treino' : 'treinos'}
+          </Text>
+          <Text style={styles.statLabel}>Sequência</Text>
+        </View>
+
+        <View style={styles.statCard}>
+          <Text style={[styles.statNumber, { color: '#FFD700' }]}>
+            {unlockedCount}/16
+          </Text>
+          <Text style={styles.statLabel}>Conquistas</Text>
+        </View>
+      </View>
+
+      {/* Segmented Tabs: Publicações | Vitrine de Conquistas */}
       <View style={styles.tabBar}>
         <Pressable
-          style={[styles.tabButton, activeTab === 'overview' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('overview')}
+          style={[styles.tabButton, activeTab === 'posts' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('posts')}
         >
           <Icon
-            name="profile"
+            name="chat"
             size="xs"
-            color={activeTab === 'overview' ? colors.white : '#8E8E93'}
+            color={activeTab === 'posts' ? colors.white : '#8E8E93'}
           />
           <Text
-            style={[styles.tabButtonText, activeTab === 'overview' && styles.tabButtonTextActive]}
+            style={[styles.tabButtonText, activeTab === 'posts' && styles.tabButtonTextActive]}
           >
-            Visão Geral
+            Publicações
           </Text>
         </Pressable>
 
@@ -170,28 +219,22 @@ export default function ProfileScreen() {
               activeTab === 'achievements' && styles.tabButtonTextActive,
             ]}
           >
-            Conquistas ({unlockedCount}/16)
+            Vitrine de Conquistas ({unlockedCount}/16)
           </Text>
         </Pressable>
       </View>
 
-      {activeTab === 'overview' ? (
+      {activeTab === 'posts' ? (
         <View>
-          {/* 3 Metric Cards */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{totalWorkouts}</Text>
-              <Text style={styles.statLabel}>Treinos</Text>
+          {/* Secondary stats row: Treinos e Volume */}
+          <View style={styles.secondaryStatsRow}>
+            <View style={styles.secondaryStatCard}>
+              <Text style={styles.secondaryStatNumber}>{totalWorkouts}</Text>
+              <Text style={styles.secondaryStatLabel}>Treinos Realizados</Text>
             </View>
-
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{volumeDisplay}</Text>
-              <Text style={styles.statLabel}>Volume total</Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{streak}</Text>
-              <Text style={styles.statLabel}>Treinos seguidos</Text>
+            <View style={styles.secondaryStatCard}>
+              <Text style={styles.secondaryStatNumber}>{volumeDisplay}</Text>
+              <Text style={styles.secondaryStatLabel}>Volume Levantado</Text>
             </View>
           </View>
 
@@ -287,6 +330,13 @@ export default function ProfileScreen() {
               setSelectedAchievement({ achievement: ach, unlocked });
             }}
           />
+          <Pressable
+            style={({ pressed }) => [styles.logoutBtn, { marginTop: spacing.xl }, pressed && styles.pressed]}
+            onPress={() => logout()}
+          >
+            <Icon name="lock" size={16} color="#FF3B30" />
+            <Text style={styles.logoutText}>Sair da conta</Text>
+          </Pressable>
         </View>
       )}
 
@@ -302,47 +352,10 @@ export default function ProfileScreen() {
           onPress={() => setAvatarModalOpen(false)}
         >
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle}>Escolha seu Avatar</Text>
-            <Text style={styles.sheetSubtitle}>
-              Selecione um dos avatares oficiais DALLAS ou insira um link:
-            </Text>
-
-            <View style={styles.presetsGrid}>
-              {PRESET_AVATARS.map((preset) => {
-                const isSelected = userAvatar === preset.uri;
-                return (
-                  <Pressable
-                    key={preset.id}
-                    style={[styles.presetItem, isSelected && styles.presetItemSelected]}
-                    onPress={() => handleSelectAvatar(preset.uri)}
-                  >
-                    <UserAvatar avatarUrl={preset.uri} name={preset.label} size={54} />
-                    <Text
-                      style={[styles.presetLabel, isSelected && styles.presetLabelSelected]}
-                    >
-                      {preset.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <View style={styles.customUrlRow}>
-              <TextInput
-                style={styles.customUrlInput}
-                placeholder="Ou cole a URL da sua foto..."
-                placeholderTextColor="#71717A"
-                value={customAvatarUrl}
-                onChangeText={setCustomAvatarUrl}
-                autoCapitalize="none"
-              />
-              <Pressable
-                style={styles.customUrlBtn}
-                onPress={handleSaveCustomAvatar}
-              >
-                <Icon name="checkCircle" size="sm" color={colors.white} />
-              </Pressable>
-            </View>
+            <Text style={styles.sheetTitle}>Foto de perfil</Text>
+            <AvatarPicker value={draftAvatar} name={user?.name} onChange={setDraftAvatar} />
+            {!!avatarError && <Text style={{ color: colors.danger }}>{avatarError}</Text>}
+            <Button title="Salvar foto" onPress={handleSaveAvatar} loading={savingAvatar} disabled={!draftAvatar || savingAvatar} />
 
             <Button
               title="Fechar"
@@ -550,6 +563,59 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  followRow: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  followBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    backgroundColor: '#FF1E27',
+  },
+  followingBtn: {
+    backgroundColor: '#1E1E24',
+    borderWidth: 1,
+    borderColor: '#3F3F46',
+  },
+  followBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  followingBtnText: {
+    color: '#D4D4D8',
+  },
+  secondaryStatsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  secondaryStatCard: {
+    flex: 1,
+    backgroundColor: '#141416',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#242428',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  secondaryStatNumber: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  secondaryStatLabel: {
+    fontSize: 10,
+    color: '#8E8E93',
+    marginTop: 3,
+    fontWeight: '600',
   },
   tabBar: {
     flexDirection: 'row',

@@ -27,6 +27,8 @@ export interface ExerciseExecutionStep {
 
 export interface Exercise {
   id: string;
+  sourceId?: string;
+  catalogOrigin?: 'api';
   name: string;
   muscleGroup: MuscleGroup;
   equipment?: ExerciseEquipment;

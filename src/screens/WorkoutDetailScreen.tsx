@@ -1,3 +1,4 @@
+import ExerciseImage from '../components/exercise/ExerciseImage';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -89,6 +90,7 @@ export default function WorkoutDetailScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <Pressable
+          accessibilityLabel="Voltar aos treinos"
           onPress={() => navigation.goBack()}
           hitSlop={12}
           style={styles.backBtn}
@@ -157,7 +159,7 @@ export default function WorkoutDetailScreen() {
               {/* Thumbnail */}
               <View style={styles.exerciseThumb}>
                 {thumbUri ? (
-                  <Image source={{ uri: thumbUri }} style={styles.thumbImage} resizeMode="cover" />
+                  <ExerciseImage uri={thumbUri} style={styles.thumbImage} resizeMode="cover" />
                 ) : (
                   <Icon name="dumbbell" size="sm" color="#FF1E27" />
                 )}

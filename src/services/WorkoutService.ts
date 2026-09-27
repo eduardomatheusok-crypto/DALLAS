@@ -2,22 +2,43 @@ import { storage } from '../storage';
 import type { Workout, WorkoutExercisePlan } from '../models';
 import type { AdvancedTechnique } from '../models';
 import { workoutsApi } from '../api';
+import { prepareExerciseImages } from './ExerciseMediaCache';
+import { exerciseService, isCatalogExercise } from './ExerciseService';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 
 export class WorkoutService {
+  async saveGeneratedWorkouts(workouts: Workout[]): Promise<void> {
+    if (!workouts.length) return;
+    const user = await storage.getUser();
+    const local = await storage.getWorkouts();
+    const byId = new Map(local.map(w => [w.id, w]));
+    workouts.forEach(w => { if (!byId.has(w.id)) byId.set(w.id, { ...w, ownerId: user?.id, pendingSync: true }); });
+    // One durable write: failures never leave half of an onboarding plan.
+    await storage.setWorkouts([...byId.values()]);
+    await this.getAll();
+  }
+
   async getAll(): Promise<Workout[]> {
     if (workoutsApi.enabled()) {
       try {
-        const remote = await workoutsApi.getAll();
-        await storage.setWorkouts(remote);
-        return remote;
+        const user = await storage.getUser();
+        for (const pending of (await storage.getWorkouts()).filter(w => w.pendingSync && w.ownerId === user?.id)) {
+          const saved = await workoutsApi.create(pending.name, pending.exercises, pending.id);
+          await this.upsertLocal(saved);
+        }
+        const remote = (await workoutsApi.getAll()).map(w => ({ ...w, ownerId: user?.id }));
+        const local = await storage.getWorkouts();
+        const merged = [...remote, ...local.filter(w => !remote.some(r => r.id === w.id))];
+        await storage.setWorkouts(merged);
+        return merged.filter(w => !w.ownerId || w.ownerId === user?.id);
       } catch {
         // segue para local
       }
     }
     const local = await storage.getWorkouts();
-    return [...local].sort(
+    const user = await storage.getUser();
+    return local.filter(w => !w.ownerId || w.ownerId === user?.id).sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }
@@ -36,6 +57,15 @@ export class WorkoutService {
   }
 
   async saveWorkout(name: string, exercises: WorkoutExercisePlan[], id?: string): Promise<Workout> {
+    const existing = id ? (await storage.getWorkouts()).find(w => w.id === id) : undefined;
+    const added = exercises.filter(e => !existing?.exercises.some(old => old.exerciseId === e.exerciseId));
+    if (added.length) {
+      const catalog = await exerciseService.getCatalog();
+      if (added.some(plan => !catalog.some(e => e.id === plan.exerciseId && isCatalogExercise(e)))) {
+        throw new Error('Selecione exercícios com imagem no catálogo antes de salvar.');
+      }
+      await prepareExerciseImages(catalog.filter(e => added.some(plan => plan.exerciseId === e.id)));
+    }
     if (workoutsApi.enabled()) {
       try {
         const saved = id
@@ -153,6 +183,7 @@ export class WorkoutService {
   }
 
   private async upsertLocal(saved: Workout): Promise<void> {
+    saved = { ...saved, ownerId: (await storage.getUser())?.id };
     const list = await storage.getWorkouts();
     const idx = list.findIndex((w) => w.id === saved.id);
     if (idx === -1) {

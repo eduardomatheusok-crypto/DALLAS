@@ -53,7 +53,7 @@ class BackendIntegrationTest {
     void healthDisponivel() throws Exception {
         mvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ok"));
+                .andExpect(jsonPath("$.status").value("UP"));
     }
 
     @Test
@@ -63,16 +63,16 @@ class BackendIntegrationTest {
         mvc.perform(get("/api/auth/me")
                         .header(HttpHeaders.AUTHORIZATION, bearer(token)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("atleta" + "login" + "-1"));
+                .andExpect(jsonPath("$.username").value("atleta" + "login" + "-" + seq));
 
         mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "atletalogin-1",
+                                  "username": "%s",
                                   "password": "senha123"
                                 }
-                                """))
+                                """.formatted("atletalogin-" + seq)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty());
     }
@@ -247,5 +247,39 @@ class BackendIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isNumber());
+    }
+
+    @Test
+    void catalogoRetornaIdentidadeEMidiaDoMesmoExercicio() throws Exception {
+        String token = registerAndGetToken("catalogo");
+        var response = mvc.perform(get("/api/exercises").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        var exercises = om.readTree(response);
+        org.junit.jupiter.api.Assertions.assertTrue(exercises.size() >= 49);
+        for (var exercise : exercises) {
+            if (exercise.get("custom").asBoolean()) continue;
+            org.junit.jupiter.api.Assertions.assertFalse(exercise.get("id").asText().isBlank());
+            org.junit.jupiter.api.Assertions.assertTrue(exercise.get("startImage").asText().contains(exercise.get("sourceId").asText()));
+            org.junit.jupiter.api.Assertions.assertTrue(exercise.get("endImage").asText().contains(exercise.get("sourceId").asText()));
+        }
+    }
+
+    @Test
+    void repetirCriacaoComMesmoIdNaoDuplicaTreino() throws Exception {
+        String token = registerAndGetToken("retry");
+        String payload = """
+                {"id":"onboarding-retry-test","name":"Upper A","exercises":[
+                  {"exerciseId":"catalog-reference","order":1,"plannedSets":4,"plannedReps":13}
+                ]}
+                """;
+        for (int i = 0; i < 2; i++) {
+            mvc.perform(post("/api/workouts").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON).content(payload))
+                    .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value("onboarding-retry-test"));
+        }
+        mvc.perform(get("/api/workouts").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].exercises[0].plannedSets").value(4))
+                .andExpect(jsonPath("$[0].exercises[0].plannedReps").value(13));
     }
 }

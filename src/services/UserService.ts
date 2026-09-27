@@ -1,6 +1,7 @@
 import { storage } from '../storage';
 import type { User } from '../models';
 import { userApi } from '../api';
+import { persistImage } from './MediaService';
 
 export class UserService {
   /** Recupera o usuário da sessão persistida sem tocar a rede. */
@@ -13,8 +14,10 @@ export class UserService {
     if (userApi.enabled()) {
       try {
         const remote = await userApi.authMe();
-        await storage.setUser(remote);
-        return remote;
+        const profile = await storage.getCustom<Partial<User>>(`@dallas/profile/${remote.id}`, {});
+        const merged = { ...(existing?.id === remote.id ? existing : {}), ...remote, ...profile };
+        await storage.setUser(merged);
+        return merged;
       } catch {
         // segue para local
       }
@@ -38,7 +41,8 @@ export class UserService {
   async register(username: string, password: string, avatarUrl?: string): Promise<User> {
     const { user } = await userApi.register(username, password);
     if (avatarUrl) {
-      user.avatarUrl = avatarUrl;
+      user.avatarUrl = await persistImage(avatarUrl);
+      await storage.setCustom(`@dallas/profile/${user.id}`, { avatarUrl: user.avatarUrl });
     }
     await storage.setUser(user);
     return user;
@@ -47,15 +51,21 @@ export class UserService {
   async updateProfile(updates: Partial<User>): Promise<User | null> {
     const user = await storage.getUser();
     if (!user) return null;
-    const updated = { ...user, ...updates };
+    const persisted = { ...updates };
+    if (persisted.avatarUrl) persisted.avatarUrl = await persistImage(persisted.avatarUrl);
+    const profile = await storage.getCustom<Partial<User>>(`@dallas/profile/${user.id}`, {});
+    await storage.setCustom(`@dallas/profile/${user.id}`, { ...profile, ...persisted });
+    const updated = { ...user, ...persisted };
     await storage.setUser(updated);
     return updated;
   }
 
   async login(username: string, password: string): Promise<User> {
     const { user } = await userApi.login(username, password);
-    await storage.setUser(user);
-    return user;
+    const profile = await storage.getCustom<Partial<User>>(`@dallas/profile/${user.id}`, {});
+    const merged = { ...user, ...profile };
+    await storage.setUser(merged);
+    return merged;
   }
 
   async logout(): Promise<void> {

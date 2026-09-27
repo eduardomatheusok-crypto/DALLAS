@@ -1,3 +1,4 @@
+import ExerciseImage from './ExerciseImage';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +15,7 @@ import { Icon } from '../../theme/icons';
 
 interface ExerciseMediaViewerProps {
   startImage?: string;
+  gifUrl?: string;
   endImage?: string;
   mode?: 'full' | 'thumbnail';
   autoAnimate?: boolean;
@@ -22,6 +24,7 @@ interface ExerciseMediaViewerProps {
 
 export default function ExerciseMediaViewer({
   startImage,
+  gifUrl,
   endImage,
   mode = 'full',
   autoAnimate = false,
@@ -42,7 +45,8 @@ export default function ExerciseMediaViewer({
     return () => clearInterval(interval);
   }, [autoAnimate, startImage, endImage]);
 
-  const currentUri = activeFrame === 'start' ? startImage || endImage : endImage || startImage;
+  useEffect(() => { setHasError(false); setLoading(true); }, [startImage, endImage, gifUrl]);
+  const currentUri = activeFrame === 'start' ? startImage || gifUrl || endImage : endImage || startImage || gifUrl;
 
   const toggleFrame = (frame: 'start' | 'end') => {
     if (activeFrame !== frame) {
@@ -55,8 +59,8 @@ export default function ExerciseMediaViewer({
     return (
       <View style={[styles.thumbContainer, style]}>
         {currentUri && !hasError ? (
-          <Image
-            source={{ uri: currentUri }}
+          <ExerciseImage
+            uri={currentUri}
             style={styles.thumbImage}
             resizeMode="cover"
             onError={() => setHasError(true)}
@@ -80,8 +84,8 @@ export default function ExerciseMediaViewer({
         )}
 
         {currentUri && !hasError ? (
-          <Image
-            source={{ uri: currentUri }}
+          <ExerciseImage
+            uri={currentUri}
             style={styles.fullImage}
             resizeMode="cover"
             onLoadEnd={() => setLoading(false)}

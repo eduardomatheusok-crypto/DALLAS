@@ -191,7 +191,7 @@ export default function HomeScreen() {
             </View>
             <Pressable
               style={styles.bellButton}
-              onPress={() => {}}
+              onPress={() => navigation.navigate('Settings')}
               hitSlop={10}
             >
               <Icon name="bell" size={22} color="#FFFFFF" />

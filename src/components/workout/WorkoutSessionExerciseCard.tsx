@@ -1,3 +1,4 @@
+import ExerciseImage from '../exercise/ExerciseImage';
 import React from 'react';
 import {
   Image,
@@ -80,8 +81,8 @@ export default function WorkoutSessionExerciseCard({
       {/* Thumbnail do Exercício */}
       <View style={styles.thumbnailContainer}>
         {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
+          <ExerciseImage
+            uri={imageUrl}
             style={styles.thumbnailImage}
             resizeMode="cover"
           />

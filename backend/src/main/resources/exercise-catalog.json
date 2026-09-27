@@ -1,0 +1,886 @@
+[
+  {
+    "sourceId": "Barbell_Bench_Press_-_Medium_Grip",
+    "legacyName": "Supino Reto",
+    "name": "Supino Reto",
+    "muscleGroup": "Peito",
+    "equipment": "Barra",
+    "secondaryMuscles": [
+      "Tríceps",
+      "Ombros"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/1.jpg",
+    "instructions": [
+      "Deite-se no banco reto com os olhos alinhados com a barra.",
+      "Abaixe a barra de forma controlada até o meio do peitoral.",
+      "Empurre estendendo os braços com força sem descolar as escápulas do banco."
+    ],
+    "dallasTip": "Retraia as escápulas no banco e mantenha os pés firmes no chão. Nada de cotovelos abertos a 90 graus!"
+  },
+  {
+    "sourceId": "Incline_Dumbbell_Press",
+    "legacyName": "Supino Inclinado com Halteres",
+    "name": "Supino Inclinado com Halteres",
+    "muscleGroup": "Peito",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Ombros",
+      "Tríceps"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/1.jpg",
+    "instructions": [
+      "Ajuste o banco inclinado em 30-45 graus.",
+      "Desça os halteres alinhados na altura do peito superior.",
+      "Empurre convergindo levemente os halteres sem batê-los no topo."
+    ],
+    "dallasTip": "Incline o banco a 30° ou 45°. Foque na contração da porção clavicular (superior) do peito!"
+  },
+  {
+    "sourceId": "Dumbbell_Flyes",
+    "legacyName": "Crucifixo com Halteres",
+    "name": "Crucifixo com Halteres",
+    "muscleGroup": "Peito",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Ombros"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/1.jpg",
+    "instructions": [
+      "Deite no banco reto segurando os halteres com as palmas voltadas uma para a outra.",
+      "Abra os braços em arco amplo até sentir o peito alongar totalmente.",
+      "Retorne fechando o arco, esmagando o peito no topo."
+    ],
+    "dallasTip": "Mantenha os cotovelos levemente flexionados e congelados no mesmo ângulo do início ao fim."
+  },
+  {
+    "sourceId": "Cable_Crossover",
+    "legacyName": "Crossover na Polia Média",
+    "name": "Crossover na Polia Média",
+    "muscleGroup": "Peito",
+    "equipment": "Polia",
+    "secondaryMuscles": [
+      "Ombros"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/1.jpg",
+    "instructions": [
+      "Posicione-se no centro da estação de polias com pegada pronada ou neutra.",
+      "Junte as mãos à frente do peito cruzando levemente os punhos no final.",
+      "Controle o retorno até alongar a musculatura peitoral."
+    ],
+    "dallasTip": "Mantenha o tronco estável com um pé à frente. Sinta a tensão contínua que só o cabo proporciona!"
+  },
+  {
+    "sourceId": "Butterfly",
+    "legacyName": "Voador / Peck Deck",
+    "name": "Voador / Peck Deck",
+    "muscleGroup": "Peito",
+    "equipment": "Máquina",
+    "secondaryMuscles": [
+      "Ombros"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Butterfly/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Butterfly/1.jpg",
+    "instructions": [
+      "Sente-se com as costas apoiadas e antebraços ou mãos nos apoios.",
+      "Feche os braços contraindo o peitoral ao máximo.",
+      "Abra devagar controlando a carga."
+    ],
+    "dallasTip": "Ajuste a altura do banco para que os pegadores fiquem na linha do meio do peito. Esmague por 1 segundo!"
+  },
+  {
+    "sourceId": "Pushups",
+    "legacyName": "Flexão de Braço",
+    "name": "Flexão de Braço",
+    "muscleGroup": "Peito",
+    "equipment": "Peso Corporal",
+    "secondaryMuscles": [
+      "Tríceps",
+      "Ombros",
+      "Abdômen"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/1.jpg",
+    "instructions": [
+      "Apoie as mãos no chão um pouco além da largura dos ombros.",
+      "Desça o corpo até o peito quase tocar o solo.",
+      "Empurre o chão com força até estender os braços."
+    ],
+    "dallasTip": "Corpo reto como uma tábua! Ative o glúteo e o abdômen para a lombar não cair."
+  },
+  {
+    "sourceId": "Wide-Grip_Lat_Pulldown",
+    "legacyName": "Puxada Frontal (Pulley)",
+    "name": "Puxada Frontal (Pulley)",
+    "muscleGroup": "Costas",
+    "equipment": "Polia",
+    "secondaryMuscles": [
+      "Bíceps",
+      "Ombros"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Wide-Grip_Lat_Pulldown/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Wide-Grip_Lat_Pulldown/1.jpg",
+    "instructions": [
+      "Ajuste o apoio das pernas e segure a barra com pegada aberta.",
+      "Incline o tronco levemente para trás e puxe a barra até a altura da clavícula.",
+      "Suba controlando a subida até alongar as dorsais."
+    ],
+    "dallasTip": "Puxe com os cotovelos apontando para o chão, e não com os bíceps! Imagine esmagar uma noz nas axilas."
+  },
+  {
+    "sourceId": "Bent_Over_Barbell_Row",
+    "legacyName": "Remada Curvada com Barra",
+    "name": "Remada Curvada com Barra",
+    "muscleGroup": "Costas",
+    "equipment": "Barra",
+    "secondaryMuscles": [
+      "Bíceps",
+      "Ombros",
+      "Glúteos"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Barbell_Row/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Barbell_Row/1.jpg",
+    "instructions": [
+      "Incline o tronco a cerca de 45° mantendo a curvatura natural da coluna.",
+      "Puxe a barra levando os cotovelos para trás e para cima.",
+      "Desça alongando bem as costas sem arredondar a lombar."
+    ],
+    "dallasTip": "Coluna 100% reta e peito estufado! Puxe a barra em direção ao umbigo."
+  },
+  {
+    "sourceId": "Seated_Cable_Rows",
+    "legacyName": "Remada Baixa no Triângulo",
+    "name": "Remada Baixa no Triângulo",
+    "muscleGroup": "Costas",
+    "equipment": "Polia",
+    "secondaryMuscles": [
+      "Bíceps"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Cable_Rows/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Cable_Rows/1.jpg",
+    "instructions": [
+      "Sente-se com os pés apoiados e joelhos levemente flexionados.",
+      "Puxe o pegador triângulo até a boca do estômago juntando as escápulas.",
+      "Estenda os braços com controle sem jogar o corpo para frente."
+    ],
+    "dallasTip": "Evite balançar o tronco para frente e para trás. Isole as dorsais e junte as escápulas atrás!"
+  },
+  {
+    "sourceId": "One-Arm_Dumbbell_Row",
+    "legacyName": "Remada Unilateral (Serrote)",
+    "name": "Remada Unilateral (Serrote)",
+    "muscleGroup": "Costas",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Bíceps"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/1.jpg",
+    "instructions": [
+      "Apoie joelho e mão no banco com coluna reta e paralela ao solo.",
+      "Segure o halter e puxe levando o cotovelo rente ao corpo até a cintura.",
+      "Desça o halter sentindo a dorsal alongar na descida."
+    ],
+    "dallasTip": "Apoie um joelho e mão no banco. Puxe o halter em direção ao quadril, não em direção ao ombro!"
+  },
+  {
+    "sourceId": "Pullups",
+    "legacyName": "Barra Fixa (Pronada)",
+    "name": "Barra Fixa (Pronada)",
+    "muscleGroup": "Costas",
+    "equipment": "Peso Corporal",
+    "secondaryMuscles": [
+      "Bíceps",
+      "Ombros",
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pullups/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pullups/1.jpg",
+    "instructions": [
+      "Pendure-se na barra com as mãos voltadas para frente.",
+      "Puxe seu corpo para cima até o queixo ultrapassar a barra.",
+      "Desça controladamente até a extensão completa dos braços."
+    ],
+    "dallasTip": "O rei dos exercícios de costas! Inicie o movimento deprimindo as escápulas antes de dobrar os braços."
+  },
+  {
+    "sourceId": "Rope_Straight-Arm_Pulldown",
+    "legacyName": "Pulldown com Corda na Polia",
+    "name": "Pulldown com Corda na Polia",
+    "muscleGroup": "Costas",
+    "equipment": "Polia",
+    "secondaryMuscles": [
+      "Tríceps"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rope_Straight-Arm_Pulldown/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rope_Straight-Arm_Pulldown/1.jpg",
+    "instructions": [
+      "Fique em pé de frente para a polia alta segurando a corda.",
+      "Mantenha os cotovelos levemente flexionados e empurre as mãos em direção às coxas.",
+      "Retorne sentindo o alongamento da dorsal lá em cima."
+    ],
+    "dallasTip": "Braços semi-estendidos e tronco estável. Esse isola a grande dorsal sem usar o bíceps!"
+  },
+  {
+    "sourceId": "Barbell_Deadlift",
+    "legacyName": "Levantamento Terra",
+    "name": "Levantamento Terra",
+    "muscleGroup": "Costas",
+    "equipment": "Barra",
+    "secondaryMuscles": [
+      "Pernas",
+      "Glúteos",
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/1.jpg",
+    "instructions": [
+      "Pés na largura do quadril, barra próxima às canelas.",
+      "Segure a barra, empurre o chão com os calcanhares mantendo o peito erguido.",
+      "Fique ereto alinhando joelhos e quadril sem hiperextender a coluna."
+    ],
+    "dallasTip": "A barra deve subir raspando na canela. Respire fundo, trave o abdômen e empurre o chão!"
+  },
+  {
+    "sourceId": "Dumbbell_Shoulder_Press",
+    "legacyName": "Desenvolvimento com Halteres",
+    "name": "Desenvolvimento com Halteres",
+    "muscleGroup": "Ombros",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Tríceps"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shoulder_Press/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shoulder_Press/1.jpg",
+    "instructions": [
+      "Sente-se com apoio nas costas e halteres na altura das orelhas.",
+      "Empurre os halteres para cima até quase esticar os braços.",
+      "Desça até a linha do queixo ou orelhas de forma controlada."
+    ],
+    "dallasTip": "Não deixe os cotovelos totalmente abertos para os lados. Feche-os levemente a 60° no plano escapular!"
+  },
+  {
+    "sourceId": "Side_Lateral_Raise",
+    "legacyName": "Elevação Lateral com Halteres",
+    "name": "Elevação Lateral com Halteres",
+    "muscleGroup": "Ombros",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Trapézio"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/1.jpg",
+    "instructions": [
+      "Em pé, segure os halteres ao lado das coxas com leve inclinação do tronco.",
+      "Eleve os braços lateralmente até a altura dos ombros.",
+      "Desça segurando a descida por 2 segundos."
+    ],
+    "dallasTip": "Pense em empurrar as paredes para longe, e não em levantar os pesos! Pare na linha dos ombros."
+  },
+  {
+    "sourceId": "Cable_Seated_Lateral_Raise",
+    "legacyName": "Elevação Lateral na Polia",
+    "name": "Elevação Lateral Sentado na Polia",
+    "muscleGroup": "Ombros",
+    "equipment": "Polia",
+    "secondaryMuscles": [
+      "Trapézio"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/1.jpg",
+    "instructions": [
+      "Stand in the middle of two low pulleys that are opposite to each other and place a flat bench right behind you (in perpendicular fashion to you; the narrow edge of the bench should be the one behind you). Select the weight to be used on each pulley.",
+      "Now sit at the edge of the flat bench behind you with your feet placed in front of your knees.",
+      "Bend forward while keeping your back flat and rest your torso on the thighs.",
+      "Have someone give you the single handles attached to the pulleys. Grasp the left pulley with the right hand and the right pulley with the left after you select your weight. The pulleys should run under your knees and your arms will be extended with palms facing each other and a slight bend at the elbows. This will be the starting position.",
+      "While keeping the arms stationary, raise the upper arms to the sides until they are parallel to the floor and at shoulder height. Exhale during the execution of this movement and hold the contraction for a second.",
+      "Slowly lower your arms to the starting position as you inhale.",
+      "Repeat for the recommended amount of repetitions. Tip: Maintain upper arms perpendicular to torso and a fixed elbow position (10 degree to 30 degree angle) throughout exercise."
+    ]
+  },
+  {
+    "sourceId": "Front_Dumbbell_Raise",
+    "legacyName": "Elevação Frontal com Halteres",
+    "name": "Elevação Frontal com Halteres",
+    "muscleGroup": "Ombros",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Peito"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Dumbbell_Raise/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Dumbbell_Raise/1.jpg",
+    "instructions": [
+      "Segure os halteres à frente das coxas com pegada pronada ou neutra.",
+      "Eleve os braços à frente até a linha dos olhos.",
+      "Desça com controle mantendo a postura reta."
+    ],
+    "dallasTip": "Mantenha o tronco firme sem dar impulso com o quadril. O deltoide anterior faz todo o trabalho."
+  },
+  {
+    "sourceId": "Reverse_Flyes",
+    "legacyName": "Crucifixo Invertido (Deltoide Posterior)",
+    "name": "Crucifixo Invertido (Deltoide Posterior)",
+    "muscleGroup": "Ombros",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Costas"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Flyes/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Flyes/1.jpg",
+    "instructions": [
+      "Incline o tronco à frente até ficar quase paralelo ao chão.",
+      "Com os cotovelos levemente dobrados, abra os braços para os lados.",
+      "Aperte a parte de trás do ombro e desça sem bater os halteres."
+    ],
+    "dallasTip": "Essencial para a saúde dos ombros e postura! Abra os braços focando na parte de trás dos ombros."
+  },
+  {
+    "sourceId": "Dumbbell_Shrug",
+    "legacyName": "Encolhimento com Halteres",
+    "name": "Encolhimento com Halteres",
+    "muscleGroup": "Ombros",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/1.jpg",
+    "instructions": [
+      "Em pé ereto, segure halteres pesados ao lado do corpo.",
+      "Eleve os ombros diretamente para cima o máximo possível.",
+      "Segure 1 segundo no topo e abaixe lentamente."
+    ],
+    "dallasTip": "Nada de rodar os ombros! Movimento estritamente vertical: puxe os ombros na orelha e aperte o trapézio."
+  },
+  {
+    "sourceId": "EZ-Bar_Curl",
+    "legacyName": "Rosca Direta com Barra W",
+    "name": "Rosca Direta com Barra W",
+    "muscleGroup": "Bíceps",
+    "equipment": "Barra",
+    "secondaryMuscles": [
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Curl/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Curl/1.jpg",
+    "instructions": [
+      "Stand up straight while holding an EZ curl bar at the wide outer handle. The palms of your hands should be facing forward and slightly tilted inward due to the shape of the bar. Keep your elbows close to your torso. This will be your starting position.",
+      "Now, while keeping your upper arms stationary, exhale and curl the weights forward while contracting the biceps. Focus on only moving your forearms.",
+      "Continue to raise the weight until your biceps are fully contracted and the bar is at shoulder level. Hold the top contracted position for a moment and squeeze the biceps.",
+      "Then inhale and slowly lower the bar back to the starting position.",
+      "Repeat for the recommended amount of repetitions."
+    ]
+  },
+  {
+    "sourceId": "Dumbbell_Bicep_Curl",
+    "legacyName": "Rosca Alternada com Halteres",
+    "name": "Rosca Alternada com Halteres",
+    "muscleGroup": "Bíceps",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bicep_Curl/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bicep_Curl/1.jpg",
+    "instructions": [
+      "Comece com as palmas voltadas para as coxas.",
+      "Ao subir, rotacione a palma da mão para cima.",
+      "Aperte o bíceps no topo e desça controlando cada repetição."
+    ],
+    "dallasTip": "Gire o punho (supinação) conforme sobe o halter para espremer o pico do bíceps!"
+  },
+  {
+    "sourceId": "Hammer_Curls",
+    "legacyName": "Rosca Martelo",
+    "name": "Rosca Martelo",
+    "muscleGroup": "Bíceps",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hammer_Curls/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hammer_Curls/1.jpg",
+    "instructions": [
+      "Segure os halteres com as palmas voltadas para o corpo.",
+      "Eleve os pesos mantendo os punhos firmes e alinhados.",
+      "Controle a descida para queimar o antebraço e braquial."
+    ],
+    "dallasTip": "Pegada neutra (palmas viradas uma para a outra). Constrói o braquial e a grossura do braço!"
+  },
+  {
+    "sourceId": "Preacher_Curl",
+    "legacyName": "Rosca Scott com Barra",
+    "name": "Rosca Scott com Barra",
+    "muscleGroup": "Bíceps",
+    "equipment": "Máquina",
+    "secondaryMuscles": [
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/1.jpg",
+    "instructions": [
+      "Apoie os braços e o peito confortavelmente no suporte inclinado.",
+      "Suba a barra contraindo os bíceps até a vertical.",
+      "Desça devagar parando antes de travar a articulação do cotovelo."
+    ],
+    "dallasTip": "O banco Scott impede trapaças! Isole o bíceps sem deixar o braço hiperestender no final."
+  },
+  {
+    "sourceId": "Incline_Dumbbell_Curl",
+    "legacyName": "Rosca no Banco Inclinado",
+    "name": "Rosca no Banco Inclinado",
+    "muscleGroup": "Bíceps",
+    "equipment": "Halteres",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Curl/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Curl/1.jpg",
+    "instructions": [
+      "Deite-se no banco inclinado deixando os braços pendurados para trás.",
+      "Suba os halteres mantendo os cotovelos apontados para o chão.",
+      "Desça bem devagar aproveitando a fase excêntrica."
+    ],
+    "dallasTip": "Banco em 45°. Essa posição coloca a cabeça longa do bíceps sob máximo alongamento."
+  },
+  {
+    "sourceId": "Triceps_Pushdown_-_Rope_Attachment",
+    "legacyName": "Tríceps Pulley com Corda",
+    "name": "Tríceps Pulley com Corda",
+    "muscleGroup": "Tríceps",
+    "equipment": "Polia",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown_-_Rope_Attachment/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown_-_Rope_Attachment/1.jpg",
+    "instructions": [
+      "Segure a corda na polia alta com cotovelos fixados ao lado do tronco.",
+      "Empurre para baixo estendendo os braços e abrindo a corda no final.",
+      "Suba as mãos até a altura do peito mantendo os cotovelos imóveis."
+    ],
+    "dallasTip": "No final da extensão, afaste as pontas da corda para os lados! O aperto na cabeça lateral é insano."
+  },
+  {
+    "sourceId": "Triceps_Pushdown",
+    "legacyName": "Tríceps Pulley com Barra Reta",
+    "name": "Tríceps Pulley com Barra Reta",
+    "muscleGroup": "Tríceps",
+    "equipment": "Polia",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/1.jpg",
+    "instructions": [
+      "Segure a barra reta com pegada pronada na largura dos ombros.",
+      "Empurre a barra para baixo até a extensão total dos braços.",
+      "Retorne de forma controlada até 90 graus de flexão."
+    ],
+    "dallasTip": "Não incline demais o corpo sobre a barra. Deixe a força vir dos tríceps e não do peso do seu corpo."
+  },
+  {
+    "sourceId": "Lying_Triceps_Press",
+    "legacyName": "Tríceps Testa com Barra W",
+    "name": "Tríceps Testa com Barra W",
+    "muscleGroup": "Tríceps",
+    "equipment": "Barra",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Triceps_Press/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Triceps_Press/1.jpg",
+    "instructions": [
+      "Deite no banco segurando a barra com braços estendidos.",
+      "Dobre apenas os cotovelos levando a barra em direção à testa ou topo da cabeça.",
+      "Estenda os cotovelos contraindo os tríceps com força."
+    ],
+    "dallasTip": "Mantenha os cotovelos apontados para o teto e levemente inclinados para trás da cabeça."
+  },
+  {
+    "sourceId": "Standing_Dumbbell_Triceps_Extension",
+    "legacyName": "Tríceps Francês com Halter",
+    "name": "Tríceps Francês com Halter",
+    "muscleGroup": "Tríceps",
+    "equipment": "Halteres",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Dumbbell_Triceps_Extension/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Dumbbell_Triceps_Extension/1.jpg",
+    "instructions": [
+      "Sentado ou em pé, segure o halter verticalmente atrás da cabeça.",
+      "Desça o peso flexionando os cotovelos até sentir alongar bem.",
+      "Estenda os braços para cima empurrando o teto."
+    ],
+    "dallasTip": "Excelente para a cabeça longa do tríceps! Segure o halter com as duas mãos atrás da nuca."
+  },
+  {
+    "sourceId": "Dips_-_Triceps_Version",
+    "legacyName": "Mergulho nas Paralelas / Banco",
+    "name": "Mergulho nas Paralelas (Tríceps)",
+    "muscleGroup": "Tríceps",
+    "equipment": "Peso Corporal",
+    "secondaryMuscles": [
+      "Peito",
+      "Ombros"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Triceps_Version/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Triceps_Version/1.jpg",
+    "instructions": [
+      "To get into the starting position, hold your body at arm's length with your arms nearly locked above the bars.",
+      "Now, inhale and slowly lower yourself downward. Your torso should remain upright and your elbows should stay close to your body. This helps to better focus on tricep involvement. Lower yourself until there is a 90 degree angle formed between the upper arm and forearm.",
+      "Then, exhale and push your torso back up using your triceps to bring your body back to the starting position.",
+      "Repeat the movement for the prescribed amount of repetitions."
+    ]
+  },
+  {
+    "sourceId": "Barbell_Full_Squat",
+    "legacyName": "Agachamento Livre com Barra",
+    "name": "Agachamento Livre com Barra",
+    "muscleGroup": "Pernas",
+    "equipment": "Barra",
+    "secondaryMuscles": [
+      "Glúteos",
+      "Costas",
+      "Abdômen"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Full_Squat/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Full_Squat/1.jpg",
+    "instructions": [
+      "Posicione a barra sobre os trapézios com peito aberto e postura ereta.",
+      "Desça empurrando o quadril para trás e dobrando os joelhos.",
+      "Desça até as coxas ficarem paralelas ao chão e suba empurrando os calcanhares."
+    ],
+    "dallasTip": "Pés na largura dos ombros, pontas levemente para fora. Joelhos acompanham a linha dos pés!"
+  },
+  {
+    "sourceId": "Leg_Press",
+    "legacyName": "Leg Press 45°",
+    "name": "Leg Press 45°",
+    "muscleGroup": "Pernas",
+    "equipment": "Máquina",
+    "secondaryMuscles": [
+      "Glúteos",
+      "Panturrilha"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Press/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Press/1.jpg",
+    "instructions": [
+      "Apoie as costas firmemente no encosto e posicione os pés na plataforma.",
+      "Destrave a máquina e desça a plataforma até formar 90 graus nos joelhos.",
+      "Empurre a plataforma sem tirar a lombar do banco."
+    ],
+    "dallasTip": "Nunca trave (estique) os joelhos 100% no topo! Mantenha a lombar colada no encosto o tempo todo."
+  },
+  {
+    "sourceId": "Leg_Extensions",
+    "legacyName": "Cadeira Extensora",
+    "name": "Cadeira Extensora",
+    "muscleGroup": "Pernas",
+    "equipment": "Máquina",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/1.jpg",
+    "instructions": [
+      "Ajuste o rolo acolchoado na altura dos tornozelos e encoste as costas.",
+      "Estenda as pernas para cima até a horizontal.",
+      "Segure 1 segundo no pico de contração e desça suavemente."
+    ],
+    "dallasTip": "Segure 1 segundo no topo com a perna estendida para recrutar cada fibra do quadríceps!"
+  },
+  {
+    "sourceId": "Lying_Leg_Curls",
+    "legacyName": "Mesa Flexora",
+    "name": "Mesa Flexora",
+    "muscleGroup": "Pernas",
+    "equipment": "Máquina",
+    "secondaryMuscles": [
+      "Glúteos",
+      "Panturrilha"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/1.jpg",
+    "instructions": [
+      "Deite-se de bruços com o rolo posicionado logo acima dos calcanhares.",
+      "Puxe os calcanhares em direção aos glúteos contraindo a parte posterior da coxa.",
+      "Retorne devagar segurando a descida."
+    ],
+    "dallasTip": "Cole o quadril no banco! Se o quadril subir durante a flexão, diminua um pouco a carga."
+  },
+  {
+    "sourceId": "Seated_Leg_Curl",
+    "legacyName": "Cadeira Flexora",
+    "name": "Cadeira Flexora",
+    "muscleGroup": "Pernas",
+    "equipment": "Máquina",
+    "secondaryMuscles": [
+      "Glúteos"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/1.jpg",
+    "instructions": [
+      "Sente-se com o encosto ajustado e a coxa travada pela almofada superior.",
+      "Flexione os joelhos puxando os calcanhares para trás e para baixo.",
+      "Retorne devagar controlando a volta."
+    ],
+    "dallasTip": "A posição sentada alonga mais os isquiotibiais. Mantenha os pés em dorsiflexão (pontas apontadas para cima)."
+  },
+  {
+    "sourceId": "Split_Squats",
+    "legacyName": "Agachamento Búlgaro",
+    "name": "Agachamento Búlgaro",
+    "muscleGroup": "Pernas",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Glúteos"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squats/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squats/1.jpg",
+    "instructions": [
+      "Apoie a ponta do pé de trás em um banco ou suporte.",
+      "Dobre o joelho da frente descendo até a coxa ficar paralela ao chão.",
+      "Empurre o chão com a perna da frente para retornar à posição inicial."
+    ],
+    "dallasTip": "O terror das academias, mas o melhor para pernas e glúteos! Foque o peso no calcanhar da perna da frente."
+  },
+  {
+    "sourceId": "Dumbbell_Lunges",
+    "legacyName": "Afundo / Passada com Halteres",
+    "name": "Afundo / Passada com Halteres",
+    "muscleGroup": "Pernas",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Glúteos"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/1.jpg",
+    "instructions": [
+      "Dê um passo à frente com uma perna e flexione ambos os joelhos.",
+      "O joelho de trás deve quase tocar o solo.",
+      "Empurre de volta ou dê o próximo passo com a outra perna."
+    ],
+    "dallasTip": "Passo firme para frente sem deixar o joelho desviar para dentro. Tronco sempre ereto!"
+  },
+  {
+    "sourceId": "Hack_Squat",
+    "legacyName": "Agachamento Hack",
+    "name": "Agachamento Hack",
+    "muscleGroup": "Pernas",
+    "equipment": "Máquina",
+    "secondaryMuscles": [
+      "Glúteos"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hack_Squat/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hack_Squat/1.jpg",
+    "instructions": [
+      "Apoie os ombros e as costas no encosto do aparelho Hack.",
+      "Destrave as alavancas e desça dobrando os joelhos em profundidade segura.",
+      "Empurre a plataforma com os calcanhares para voltar."
+    ],
+    "dallasTip": "Excelente estabilidade para focar no quadríceps sem cansar a lombar. Amplitude total!"
+  },
+  {
+    "sourceId": "Barbell_Hip_Thrust",
+    "legacyName": "Elevação Pélvica com Barra",
+    "name": "Elevação Pélvica com Barra",
+    "muscleGroup": "Glúteos",
+    "equipment": "Barra",
+    "secondaryMuscles": [
+      "Pernas"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/1.jpg",
+    "instructions": [
+      "Apoie as escápulas na borda de um banco com a barra acolchoada sobre a bacia.",
+      "Pés no chão na largura dos ombros, empurre o quadril para cima até alinhar com o tronco.",
+      "Aperte os glúteos no topo por 1 segundo e desça com controle."
+    ],
+    "dallasTip": "Queixo no peito e olhar para a frente! No topo, trave os glúteos como se segurasse uma moeda."
+  },
+  {
+    "sourceId": "Stiff-Legged_Dumbbell_Deadlift",
+    "legacyName": "Stiff com Halteres / Barra",
+    "name": "Stiff com Halteres",
+    "muscleGroup": "Glúteos",
+    "equipment": "Halteres",
+    "secondaryMuscles": [
+      "Pernas",
+      "Costas"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stiff-Legged_Dumbbell_Deadlift/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stiff-Legged_Dumbbell_Deadlift/1.jpg",
+    "instructions": [
+      "Grasp a couple of dumbbells holding them by your side at arm's length.",
+      "Stand with your torso straight and your legs spaced using a shoulder width or narrower stance. The knees should be slightly bent. This is your starting position.",
+      "Keeping the knees stationary, lower the dumbbells to over the top of your feet by bending at the waist while keeping your back straight. Keep moving forward as if you were going to pick something from the floor until you feel a stretch on the hamstrings. Exhale as you perform this movement",
+      "Start bringing your torso up straight again by extending your hips and waist until you are back at the starting position. Inhale as you perform this movement.",
+      "Repeat for the recommended amount of repetitions."
+    ]
+  },
+  {
+    "sourceId": "Thigh_Abductor",
+    "legacyName": "Cadeira Abdutora",
+    "name": "Cadeira Abdutora",
+    "muscleGroup": "Glúteos",
+    "equipment": "Máquina",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Thigh_Abductor/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Thigh_Abductor/1.jpg",
+    "instructions": [
+      "Sente-se com as almofadas na parte externa dos joelhos.",
+      "Abra as pernas o máximo possível contraindo a lateral dos glúteos.",
+      "Feche devagar sem deixar os pesos encostarem totalmente."
+    ],
+    "dallasTip": "Incline o tronco levemente à frente para direcionar o estímulo diretamente no glúteo médio e superior."
+  },
+  {
+    "sourceId": "Standing_Calf_Raises",
+    "legacyName": "Panturrilha em Pé na Máquina",
+    "name": "Panturrilha em Pé na Máquina",
+    "muscleGroup": "Panturrilha",
+    "equipment": "Máquina",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Calf_Raises/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Calf_Raises/1.jpg",
+    "instructions": [
+      "Apoie os ombros nas almofadas com as pontas dos pés na borda da plataforma.",
+      "Desça os calcanhares sentindo alongar a panturrilha por completo.",
+      "Suba na ponta dos pés o mais alto possível e segure 1 segundo."
+    ],
+    "dallasTip": "Faça uma pausa de 1 segundo embaixo para eliminar o rebote elástico do tendão de Aquiles!"
+  },
+  {
+    "sourceId": "Seated_Calf_Raise",
+    "legacyName": "Panturrilha Sentado (Gêmeos)",
+    "name": "Panturrilha Sentado (Gêmeos)",
+    "muscleGroup": "Panturrilha",
+    "equipment": "Máquina",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Calf_Raise/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Calf_Raise/1.jpg",
+    "instructions": [
+      "Sente-se com as almofadas travadas sobre as coxas.",
+      "Desça os calcanhares para máximo alongamento.",
+      "Empurre a plataforma elevando os calcanhares ao ponto mais alto."
+    ],
+    "dallasTip": "Com os joelhos dobrados, o músculo sóleo trabalha isolado. Amplitude total para engrossar a canela!"
+  },
+  {
+    "sourceId": "Calf_Press_On_The_Leg_Press_Machine",
+    "legacyName": "Panturrilha no Leg Press",
+    "name": "Panturrilha no Leg Press",
+    "muscleGroup": "Panturrilha",
+    "equipment": "Máquina",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Calf_Press_On_The_Leg_Press_Machine/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Calf_Press_On_The_Leg_Press_Machine/1.jpg",
+    "instructions": [
+      "Posicione apenas a ponta dos pés na parte inferior da plataforma.",
+      "Permita que os calcanhares desçam alongando a panturrilha.",
+      "Empurre estendendo os tornozelos para frente com força."
+    ],
+    "dallasTip": "Mantenha os joelhos quase retos (micro-flexão de segurança). Empurre apenas com a ponta dos pés."
+  },
+  {
+    "sourceId": "Crunches",
+    "legacyName": "Abdominal Crunch no Solo",
+    "name": "Abdominal Crunch no Solo",
+    "muscleGroup": "Abdômen",
+    "equipment": "Peso Corporal",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Crunches/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Crunches/1.jpg",
+    "instructions": [
+      "Lie flat on your back with your feet flat on the ground, or resting on a bench with your knees bent at a 90 degree angle. If you are resting your feet on a bench, place them three to four inches apart and point your toes inward so they touch.",
+      "Now place your hands lightly on either side of your head keeping your elbows in. Tip: Don't lock your fingers behind your head.",
+      "While pushing the small of your back down in the floor to better isolate your abdominal muscles, begin to roll your shoulders off the floor.",
+      "Continue to push down as hard as you can with your lower back as you contract your abdominals and exhale. Your shoulders should come up off the floor only about four inches, and your lower back should remain on the floor. At the top of the movement, contract your abdominals hard and keep the contraction for a second. Tip: Focus on slow, controlled movement - don't cheat yourself by using momentum.",
+      "After the one second contraction, begin to come down slowly again to the starting position as you inhale.",
+      "Repeat for the recommended amount of repetitions."
+    ]
+  },
+  {
+    "sourceId": "Hanging_Leg_Raise",
+    "legacyName": "Abdominal Infra na Paralela / Barra",
+    "name": "Abdominal Infra na Barra",
+    "muscleGroup": "Abdômen",
+    "equipment": "Peso Corporal",
+    "secondaryMuscles": [
+      "Antebraço"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hanging_Leg_Raise/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hanging_Leg_Raise/1.jpg",
+    "instructions": [
+      "Hang from a chin-up bar with both arms extended at arms length in top of you using either a wide grip or a medium grip. The legs should be straight down with the pelvis rolled slightly backwards. This will be your starting position.",
+      "Raise your legs until the torso makes a 90-degree angle with the legs. Exhale as you perform this movement and hold the contraction for a second or so.",
+      "Go back slowly to the starting position as you breathe in.",
+      "Repeat for the recommended amount of repetitions."
+    ]
+  },
+  {
+    "sourceId": "Plank",
+    "legacyName": "Prancha Abdominal",
+    "name": "Prancha Abdominal",
+    "muscleGroup": "Abdômen",
+    "equipment": "Peso Corporal",
+    "secondaryMuscles": [
+      "Ombros",
+      "Glúteos"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/1.jpg",
+    "instructions": [
+      "Apoie os antebraços e pontas dos pés no solo.",
+      "Mantenha o corpo alinhado em linha reta da cabeça aos calcanhares.",
+      "Sustente a posição com máxima contração isométrica."
+    ],
+    "dallasTip": "Aperte os glúteos e puxe o umbigo para as costas. Respire ritmicamente e resista!"
+  },
+  {
+    "sourceId": "Ab_Crunch_Machine",
+    "legacyName": "Abdominal na Máquina (Crunch)",
+    "name": "Abdominal na Máquina (Crunch)",
+    "muscleGroup": "Abdômen",
+    "equipment": "Máquina",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Crunch_Machine/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Crunch_Machine/1.jpg",
+    "instructions": [
+      "Sente-se na máquina e segure os pegadores superiores.",
+      "Flexione o tronco para frente esmagando o abdômen e soltando o ar.",
+      "Retorne devagar sentindo o alongamento do abdômen."
+    ],
+    "dallasTip": "Permite sobrecarga progressiva no abdômen. Use um peso que consiga controlar por 12 a 15 repetições."
+  },
+  {
+    "sourceId": "Reverse_Barbell_Curl",
+    "legacyName": "Rosca Inversa com Barra",
+    "name": "Rosca Inversa com Barra",
+    "muscleGroup": "Antebraço",
+    "equipment": "Barra",
+    "secondaryMuscles": [
+      "Bíceps"
+    ],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Barbell_Curl/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Barbell_Curl/1.jpg",
+    "instructions": [
+      "Segure a barra com as palmas das mãos viradas para o chão.",
+      "Eleve a barra dobrando os cotovelos sem movimentar os braços.",
+      "Desça devagar controlando a gravidade."
+    ],
+    "dallasTip": "Pegada pronada (palmas para baixo). Fortalece o braquiorradial e os extensores do punho!"
+  },
+  {
+    "sourceId": "Palms-Up_Barbell_Wrist_Curl_Over_A_Bench",
+    "legacyName": "Rosca Punho",
+    "name": "Rosca Punho com Barra",
+    "muscleGroup": "Antebraço",
+    "equipment": "Halteres",
+    "secondaryMuscles": [],
+    "startImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Palms-Up_Barbell_Wrist_Curl_Over_A_Bench/0.jpg",
+    "endImage": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Palms-Up_Barbell_Wrist_Curl_Over_A_Bench/1.jpg",
+    "instructions": [
+      "Start out by placing a barbell on one side of a flat bench.",
+      "Kneel down on both of your knees so that your body is facing the flat bench.",
+      "Use your arms to grab the barbell with a supinated grip (palms up) and bring them up so that your forearms are resting against the flat bench. Your wrists should be hanging over the edge.",
+      "Start out by curling your wrist upwards and exhaling.",
+      "Slowly lower your wrists back down to the starting position while inhaling.",
+      "Your forearms should be stationary as your wrist is the only movement needed to perform this exercise.",
+      "Repeat for the recommended amount of repetitions."
+    ]
+  }
+]

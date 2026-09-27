@@ -15,6 +15,7 @@ export interface CommunityPost {
   userAvatar?: string;
   text: string;
   imageUrl?: string;
+  imageAspectRatio?: number;
   videoUrl?: string;
   poll?: {
     question: string;

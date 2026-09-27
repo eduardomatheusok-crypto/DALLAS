@@ -64,8 +64,15 @@ public class WorkoutService {
 
     @Transactional
     public WorkoutDto create(String userId, WorkoutRequest request) {
+        if (request.id() != null) {
+            var existing = repository.findById(request.id());
+            if (existing.isPresent()) {
+                if (!userId.equals(existing.get().getUserId())) throw new IllegalArgumentException("ID indisponível");
+                return WorkoutDto.from(existing.get());
+            }
+        }
         WorkoutEntity entity = new WorkoutEntity();
-        entity.setId(UUID.randomUUID().toString());
+        entity.setId(request.id() == null ? UUID.randomUUID().toString() : request.id());
         entity.setUserId(userId);
         entity.setName(request.name().trim());
         Instant now = Instant.now();

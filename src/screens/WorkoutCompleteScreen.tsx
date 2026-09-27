@@ -1,9 +1,13 @@
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+import { persistImage } from '../services/MediaService';
+import WorkoutShareCard from '../components/common/WorkoutShareCard';
+import { useAuth } from '../auth/AuthContext';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
   Pressable,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -14,7 +18,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Screen from '../components/common/Screen';
 import {
-  formatDuration,
   workoutLogService,
   trainingPreferencesService,
   achievementService,
@@ -33,6 +36,8 @@ type RouteProps = {
   key: string;
   name: string;
   params: {
+    logId: string;
+    workoutName: string;
     durationSeconds: number;
     volume: number;
     series: number;
@@ -56,6 +61,13 @@ export default function WorkoutCompleteScreen() {
   const route = useRoute<RouteProps>();
   const { durationSeconds, volume, series, hasPR } = route.params;
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const shareCardRef = useRef<View>(null);
+  const shareLock = useRef(false);
+  const cardRatio = useRef(1);
+  const [sharing, setSharing] = useState(false);
+  const [cardReady, setCardReady] = useState(false);
+  const [shareError, setShareError] = useState('');
 
   // Etapas do fluxo: 'consistency' (1) -> 'summary' (2) -> AchievementModal (3)
   const [stage, setStage] = useState<'consistency' | 'summary'>('consistency');
@@ -108,7 +120,7 @@ export default function WorkoutCompleteScreen() {
         const [currentStreak, allLogs, prefs] = await Promise.all([
           workoutLogService.getStreak(),
           workoutLogService.getAll(),
-          trainingPreferencesService.getFor('local-user'),
+          trainingPreferencesService.getFor(user?.id ?? 'local-user'),
         ]);
 
         setStreak(Math.max(1, currentStreak));
@@ -117,13 +129,22 @@ export default function WorkoutCompleteScreen() {
 
         // Avalia conquistas
         if (allLogs.length > 0) {
-          const lastLog = allLogs[allLogs.length - 1];
+          const lastLog = allLogs.find((log) => log.id === route.params.logId);
+          if (!lastLog) return;
+          const isLegDay =
+            /perna|inferior|leg|quad|glút|coxa|panturr/i.test(lastLog.workoutName || '') ||
+            lastLog.exercises.some(
+              (ex) =>
+                /perna|inferior|leg|quad|glút|coxa|panturr|hamstring|calves/i.test(ex.muscleGroup || '') ||
+                /leg|agachamento|leg press|extensora|flexora|panturrilha|stiff|afundo|búlgaro/i.test(ex.exerciseName || ''),
+            );
           const newUnlocked = await achievementService.evaluateOnWorkoutComplete({
             allLogs,
             currentLog: lastLog,
             userPrefs: prefs,
             currentStreak: Math.max(1, currentStreak),
             hasPR: !!hasPR,
+            isLegDay,
           });
 
           if (newUnlocked.length > 0) {
@@ -167,24 +188,26 @@ export default function WorkoutCompleteScreen() {
 
   // Compartilhamento
   const handleShare = async () => {
-    Haptics.selectionAsync().catch(() => {});
-    const shareMessage = `Treino DALLAS concluído! 🔥\nVolume: ${Math.round(volume)} kg | Séries: ${series} | Duração: ${formatDuration(durationSeconds)}\n#BuildYourBest #DALLAS`;
-
+    if (shareLock.current || shared || !cardReady) return;
+    shareLock.current = true;
+    setSharing(true);
+    setShareError('');
     try {
-      // 1. Cria post na comunidade local
+      const captured = await captureRef(shareCardRef, { format: 'png', quality: 1, result: 'tmpfile', width: 1080, height: Math.round(1080 / cardRatio.current) });
+      const imageUrl = await persistImage(captured);
       await communityService.createPost(
-        `Treino pago com sucesso! 🔥 ${Math.round(volume)} kg levantados em ${series} séries. Foco constante!`,
-        undefined,
-        'Treino Concluído',
+        `${route.params.workoutName} concluído!`, imageUrl, route.params.workoutName,
+        { name: user?.name ?? user?.username, handle: `@${user?.username ?? 'atleta'}`, avatarUrl: user?.avatarUrl }, cardRatio.current,
       );
       setShared(true);
-
-      // 2. Abre share sheet nativo para Stories / redes
-      await Share.share({
-        message: shareMessage,
-      });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(captured, { mimeType: 'image/png', dialogTitle: 'Treino DALLAS concluído' }).catch(() => {});
+      }
     } catch {
-      // cancelado ou erro
+      setShareError('Não foi possível gerar ou salvar a imagem. Tente novamente.');
+    } finally {
+      setSharing(false);
+      shareLock.current = false;
     }
   };
 
@@ -213,7 +236,7 @@ export default function WorkoutCompleteScreen() {
   };
 
   return (
-    <Screen style={styles.screen}>
+    <Screen scroll style={styles.screen}>
       {/* ================= ETAPA 1: CELEBRAÇÃO DA CONSISTÊNCIA ================= */}
       {stage === 'consistency' && (
         <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
@@ -317,62 +340,12 @@ export default function WorkoutCompleteScreen() {
           ]}
         >
           <View style={styles.centerSection}>
-            {/* Hero com Mascote Comemorando */}
-            <View style={styles.heroWrap}>
-              <View style={styles.mascotCircle}>
-                <Image
-                  source={require('../../assets/dallas/dallas_feliz.png')}
-                  style={styles.mascotHero}
-                  resizeMode="contain"
-                />
-              </View>
-              <Text style={styles.heroTitle}>MISSÃO CUMPRIDA!</Text>
-              <Text style={styles.heroSubtitle}>Dallas aprovou seu treino com louvor. 🔥</Text>
-            </View>
-
-            {/* Card de PR (se houver) */}
-            {hasPR ? (
-              <View style={styles.prCard}>
-                <Icon name="trophy" size={20} color="#FFD700" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.prTitle}>NOVO RECORDE PESSOAL!</Text>
-                  <Text style={styles.prSubtitle}>Você superou seus limites nesta sessão.</Text>
-                </View>
-              </View>
-            ) : null}
-
-            {/* Bento Grid */}
-            <View style={styles.bentoGrid}>
-              <View style={[styles.bentoBox, styles.bentoBoxWide]}>
-                <View style={styles.bentoIconRow}>
-                  <Icon name="weight" size={18} color="#FF1E27" />
-                  <Text style={styles.bentoLabel}>CARGA TOTAL LEVANTADA</Text>
-                </View>
-                <Text style={styles.bentoValue}>
-                  {Math.round(volume).toLocaleString('pt-BR')} <Text style={styles.bentoUnit}>kg</Text>
-                </Text>
-              </View>
-
-              <View style={styles.bentoRow}>
-                <View style={[styles.bentoBox, styles.bentoBoxHalf]}>
-                  <View style={styles.bentoIconRow}>
-                    <Icon name="clock" size={16} color="#FF1E27" />
-                    <Text style={styles.bentoLabel}>TEMPO TOTAL</Text>
-                  </View>
-                  <Text style={styles.bentoValueSmall}>
-                    {formatDuration(durationSeconds)}
-                  </Text>
-                </View>
-
-                <View style={[styles.bentoBox, styles.bentoBoxHalf]}>
-                  <View style={styles.bentoIconRow}>
-                    <Icon name="checkmarkDone" size={16} color="#FF1E27" />
-                    <Text style={styles.bentoLabel}>SÉRIES</Text>
-                  </View>
-                  <Text style={styles.bentoValueSmall}>{series}</Text>
-                </View>
-              </View>
-            </View>
+            <WorkoutShareCard ref={shareCardRef} summary={route.params} onLayout={ratio => { cardRatio.current = ratio; }} onReady={() => setCardReady(true)} />
+            {hasPR && <View style={styles.prCard}>
+              <Icon name="trophy" size={20} color="#FFD700" />
+              <View style={{ flex: 1 }}><Text style={styles.prTitle}>NOVO RECORDE PESSOAL!</Text><Text style={styles.prSubtitle}>Você superou seus limites nesta sessão.</Text></View>
+            </View>}
+            {!!shareError && <Text style={{ color: '#FF6970', marginTop: 12 }}>{shareError}</Text>}
           </View>
 
           {/* Ações da Etapa 2 */}
@@ -380,10 +353,11 @@ export default function WorkoutCompleteScreen() {
             <Pressable
               style={({ pressed }) => [styles.shareBtn, pressed && styles.pressed]}
               onPress={handleShare}
+              disabled={sharing || shared || !cardReady}
             >
               <Icon name="share" size="sm" color="#FFFFFF" />
               <Text style={styles.shareBtnText}>
-                {shared ? 'COMPARTILHADO NO FEED ✓' : 'COMPARTILHAR NO FEED'}
+                {sharing ? 'GERANDO IMAGEM...' : shared ? 'COMPARTILHADO NO FEED ✓' : 'COMPARTILHAR NO FEED'}
               </Text>
             </Pressable>
 
@@ -402,8 +376,14 @@ export default function WorkoutCompleteScreen() {
         visible={showAchievementModal}
         achievement={currentModalAchievement}
         onClose={() => {
-          setShowAchievementModal(false);
-          goHome();
+          if (unlockedAchievements.length > 1) {
+            const nextList = unlockedAchievements.slice(1);
+            setUnlockedAchievements(nextList);
+            setCurrentModalAchievement(nextList[0]);
+          } else {
+            setShowAchievementModal(false);
+            goHome();
+          }
         }}
         onViewAll={() => {
           setShowAchievementModal(false);

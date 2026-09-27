@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -31,6 +31,8 @@ export default function ExerciseDetailModal({
 }: ExerciseDetailModalProps) {
   const [autoAnimate, setAutoAnimate] = useState(false);
   const [focusedImage, setFocusedImage] = useState<string | undefined>(undefined);
+
+  useEffect(() => { setFocusedImage(undefined); setAutoAnimate(false); }, [exercise?.id]);
 
   if (!exercise) return null;
 
@@ -79,6 +81,7 @@ export default function ExerciseDetailModal({
             <View style={styles.mediaSection}>
               <ExerciseMediaViewer
                 startImage={focusedImage || exercise.startImage}
+                gifUrl={exercise.gifUrl}
                 endImage={exercise.endImage}
                 autoAnimate={autoAnimate}
               />

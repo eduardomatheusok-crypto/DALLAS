@@ -1,28 +1,8 @@
 import { storage } from '../storage';
 import type { Exercise, MuscleGroup, ExerciseEquipment } from '../models';
 import { exercisesApi } from '../api';
-import 'react-native-get-random-values';
-import { v4 as uuidv4 } from 'uuid';
 
-import { CURATED_EXERCISES } from '../data/curatedExercises';
-
-function stripExerciseFields(e: Exercise): Exercise {
-  return {
-    id: e.id,
-    name: e.name,
-    muscleGroup: e.muscleGroup,
-    equipment: e.equipment,
-    secondaryMuscles: e.secondaryMuscles,
-    startImage: e.startImage,
-    endImage: e.endImage,
-    gifUrl: e.gifUrl,
-    steps: e.steps,
-    instructions: e.instructions,
-    dallasTip: e.dallasTip,
-    isCustom: e.isCustom,
-    createdAt: e.createdAt,
-  };
-}
+import { ensureApiOnline } from '../api/client';
 
 const LEGACY_ALIASES: Record<string, string> = {
   'supino reto': 'Supino Reto',
@@ -47,7 +27,7 @@ const LEGACY_ALIASES: Record<string, string> = {
   'triceps pulley': 'Tríceps Pulley com Corda',
   'abdômen': 'Abdominal Crunch no Solo',
   'abdomen': 'Abdominal Crunch no Solo',
-  'stiff': 'Stiff com Halteres / Barra',
+  'stiff': 'Stiff com Halteres',
   'panturrilha em pé': 'Panturrilha em Pé na Máquina',
   'panturrilha em pe': 'Panturrilha em Pé na Máquina',
 };
@@ -64,7 +44,7 @@ export function findExerciseByIdOrName(
 ): Exercise | undefined {
   if (id) {
     const byId = exercises.find((e) => e.id === id);
-    if (byId && (byId.startImage || !name)) return byId;
+    return byId;
   }
   if (name) {
     const canonical = resolveCanonicalName(name).toLowerCase().trim();
@@ -76,102 +56,39 @@ export function findExerciseByIdOrName(
   return id ? exercises.find((e) => e.id === id) : undefined;
 }
 
-function enrichExercises(baseList: Exercise[]): Exercise[] {
-  const curatedMap = new Map<string, (typeof CURATED_EXERCISES)[number]>();
-  for (const c of CURATED_EXERCISES) {
-    curatedMap.set(c.name.toLowerCase().trim(), c);
-  }
-
-  const result: Exercise[] = [];
-  const handledCanonicalKeys = new Set<string>();
-
-  // 1. Processa e enriquece os exercícios existentes
-  for (const ex of baseList) {
-    const canonicalName = resolveCanonicalName(ex.name);
-    const canonicalKey = canonicalName.toLowerCase().trim();
-
-    // Se já processamos um exercício com esse nome canônico, ignora a duplicata
-    if (handledCanonicalKeys.has(canonicalKey)) {
-      continue;
-    }
-
-    const curated = curatedMap.get(canonicalKey);
-    if (curated) {
-      handledCanonicalKeys.add(canonicalKey);
-      result.push({
-        ...ex,
-        name: curated.name, // Normaliza o nome para o canônico
-        muscleGroup: curated.muscleGroup,
-        equipment: curated.equipment,
-        secondaryMuscles: curated.secondaryMuscles,
-        startImage: curated.startImage,
-        endImage: curated.endImage,
-        gifUrl: ex.gifUrl,
-        steps: ex.steps || curated.steps,
-        instructions: curated.instructions,
-        dallasTip: curated.dallasTip,
-        isCustom: ex.isCustom,
-      });
-    } else {
-      // Exercício personalizado do usuário que não faz parte do catálogo
-      handledCanonicalKeys.add(canonicalKey);
-      result.push(ex);
-    }
-  }
-
-  // 2. Inclui todos os exercícios curados que ainda não estão na lista
-  for (const [key, curated] of curatedMap.entries()) {
-    if (!handledCanonicalKeys.has(key)) {
-      handledCanonicalKeys.add(key);
-      result.push({
-        ...curated,
-        id: uuidv4(),
-        isCustom: false,
-        createdAt: new Date().toISOString(),
-      });
-    }
-  }
-
-  return result;
+/** Only catalog records received through the existing API can enter new workouts. */
+export function isCatalogExercise(e: Exercise): boolean {
+  return e.catalogOrigin === 'api' && !e.isCustom && !!e.id && !!e.name.trim()
+    && e.name.trim().toLowerCase() !== 'exercício' && !!(e.startImage || e.gifUrl);
 }
 
 export class ExerciseService {
-  private async seedIfEmpty(): Promise<void> {
-    const list = await storage.getExercises();
-    
-    if (list.length === 0) {
-      const seeded: Exercise[] = CURATED_EXERCISES.map((e) => ({
-        ...e,
-        id: uuidv4(),
-        isCustom: false,
-        createdAt: new Date().toISOString(),
-      }));
-      await storage.setExercises(seeded);
-      return;
-    }
-
-    const enriched = enrichExercises(list);
-    await storage.setExercises(enriched);
-  }
+  private pending?: Promise<Exercise[]>;
 
   async getAll(): Promise<Exercise[]> {
-    if (exercisesApi.enabled()) {
+    if (this.pending) return this.pending;
+    this.pending = this.load();
+    try { return await this.pending; } finally { this.pending = undefined; }
+  }
+
+  private async load(): Promise<Exercise[]> {
+    const local = await storage.getExercises();
+    if (await ensureApiOnline()) {
       try {
         const remote = await exercisesApi.getAll();
-        if (remote.length > 0) {
-          const enriched = enrichExercises(remote);
-          await storage.setExercises(enriched);
-          return enriched.map(stripExerciseFields);
-        }
-      } catch {
-        // segue para local
-      }
+        // Keep historical references, but never enrich API records with unrelated media.
+        const byId = new Map(local.map(e => [e.id, e]));
+        remote.forEach(e => byId.set(e.id, e));
+        const merged = [...byId.values()];
+        await storage.setExercises(merged);
+        return merged;
+      } catch { /* Previously fetched catalog remains usable offline. */ }
     }
-    await this.seedIfEmpty();
-    const local = await storage.getExercises();
-    const enriched = enrichExercises(local);
-    await storage.setExercises(enriched);
-    return enriched.map(stripExerciseFields);
+    return local;
+  }
+
+  async getCatalog(): Promise<Exercise[]> {
+    return (await this.getAll()).filter(isCatalogExercise);
   }
 
   async getById(id: string): Promise<Exercise | undefined> {
@@ -203,33 +120,10 @@ export class ExerciseService {
     equipment: ExerciseEquipment = 'Outro',
     dallasTip?: string
   ): Promise<Exercise> {
-    const local: Exercise = {
-      id: uuidv4(),
-      name: name.trim(),
-      muscleGroup,
-      equipment,
-      dallasTip,
-      isCustom: true,
-      createdAt: new Date().toISOString(),
-    };
-    if (exercisesApi.enabled()) {
-      try {
-        const remote = await exercisesApi.create(name, muscleGroup);
-        await this.pushExercise(remote);
-        return stripExerciseFields(remote);
-      } catch {
-        // segue para local
-      }
-    }
-    const list = await storage.getExercises();
-    await storage.setExercises([...list, local]);
-    return local;
-  }
-
-  private async pushExercise(exercise: Exercise): Promise<void> {
-    const list = await storage.getExercises();
-    const filtered = list.filter((e) => e.name !== exercise.name);
-    await storage.setExercises([...filtered, stripExerciseFields(exercise)]);
+    const existing = (await this.getCatalog()).find(e =>
+      resolveCanonicalName(e.name).toLowerCase() === resolveCanonicalName(name).toLowerCase());
+    if (existing) return existing;
+    throw new Error('Selecione um exercício com imagem no catálogo DALLAS.');
   }
 
   async invalidate(): Promise<void> {

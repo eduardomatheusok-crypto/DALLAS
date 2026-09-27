@@ -45,7 +45,7 @@ function Root() {
     return () => {
       isMounted = false;
     };
-  }, [authed, user]);
+  }, [authed, user?.id]);
 
   if (!splashDone) {
     return <SplashScreen onFinish={() => setSplashDone(true)} />;

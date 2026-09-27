@@ -30,6 +30,7 @@ async function write<T>(key: string, value: T): Promise<void> {
     await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
     console.error(`Failed to write storage key ${key}`, err);
+    throw err;
   }
 }
 

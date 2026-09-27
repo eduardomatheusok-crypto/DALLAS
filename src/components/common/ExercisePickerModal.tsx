@@ -8,13 +8,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { isCatalogExercise } from '../../services/ExerciseService';
 import { useExercises } from '../../hooks';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { Icon } from '../../theme/icons';
 import type { Exercise, MuscleGroup } from '../../models';
 import { MUSCLE_GROUPS } from '../../models';
 import MuscleGroupPill from './MuscleGroupPill';
-import { Button } from './Button';
 import { ExerciseMediaViewer } from '../exercise';
 
 interface Props {
@@ -22,7 +22,7 @@ interface Props {
   onClose: () => void;
   onAdd: (exercise: Exercise) => void;
   selectedIds: string[];
-  onCreateCustom?: (name: string, muscleGroup: MuscleGroup) => Promise<Exercise>;
+
 }
 
 export default function ExercisePickerModal({
@@ -30,37 +30,19 @@ export default function ExercisePickerModal({
   onClose,
   onAdd,
   selectedIds,
-  onCreateCustom,
 }: Props) {
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<MuscleGroup | undefined>(undefined);
-  const [createName, setCreateName] = useState('');
-  const [createGroup, setCreateGroup] = useState<MuscleGroup>('Peito');
-  const [creating, setCreating] = useState(false);
-  const { exercises, loading, reload } = useExercises(query, group);
+  const { exercises, loading } = useExercises(query, group);
 
   useEffect(() => {
     if (!visible) {
       setQuery('');
       setGroup(undefined);
-      setCreateName('');
     }
   }, [visible]);
 
-  const available = exercises.filter((e) => !selectedIds.includes(e.id));
-
-  const createNew = async () => {
-    if (!createName.trim() || !onCreateCustom) return;
-    setCreating(true);
-    try {
-      const created = await onCreateCustom(createName.trim(), createGroup);
-      onAdd(created);
-      setCreateName('');
-      setCreating(false);
-    } catch {
-      setCreating(false);
-    }
-  };
+  const available = exercises.filter((e) => isCatalogExercise(e) && !selectedIds.includes(e.id));
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -122,6 +104,7 @@ export default function ExercisePickerModal({
               >
                 <ExerciseMediaViewer
                   startImage={item.startImage}
+                    gifUrl={item.gifUrl}
                   endImage={item.endImage}
                   mode="thumbnail"
                   style={styles.itemThumb}
@@ -143,44 +126,7 @@ export default function ExercisePickerModal({
               </Pressable>
             )}
           />
-          {onCreateCustom ? (
-            <View style={styles.createArea}>
-              <Text style={[typography.label, styles.createLabel]}>
-                Não achou? Crie um novo exercício
-              </Text>
-              <View style={styles.createRow}>
-                <TextInput
-                  style={[styles.search, styles.createInput]}
-                  placeholder="Nome do exercício"
-                  placeholderTextColor={colors.textMuted}
-                  value={createName}
-                  onChangeText={setCreateName}
-                />
-              </View>
-              <Text style={[typography.small, styles.createLabel]}>Grupo muscular</Text>
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                data={[...MUSCLE_GROUPS]}
-                keyExtractor={(g) => g}
-                style={styles.createGroups}
-                renderItem={({ item }) => (
-                  <MuscleGroupPill
-                    label={item}
-                    active={createGroup === item}
-                    onPress={() => setCreateGroup(item)}
-                  />
-                )}
-              />
-              <Button
-                title="Criar e adicionar"
-                variant="secondary"
-                onPress={createNew}
-                loading={creating}
-                disabled={!createName.trim()}
-              />
-            </View>
-          ) : null}
+
         </View>
       </View>
     </Modal>

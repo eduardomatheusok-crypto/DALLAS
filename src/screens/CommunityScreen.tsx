@@ -1,3 +1,4 @@
+import PersistedImage from '../components/common/PersistedImage';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   FlatList,
@@ -342,8 +343,8 @@ export default function CommunityScreen() {
 
               {/* Optional Post Media */}
               {item.imageUrl ? (
-                <View style={styles.postMediaContainer}>
-                  <Image source={{ uri: item.imageUrl }} style={styles.postImage} resizeMode="cover" />
+                <View style={[styles.postMediaContainer, item.imageAspectRatio ? { width: '100%', height: 'auto', aspectRatio: item.imageAspectRatio } : undefined]}>
+                  <PersistedImage uri={item.imageUrl} style={styles.postImage} resizeMode="cover" />
                 </View>
               ) : null}
 
@@ -454,9 +455,9 @@ export default function CommunityScreen() {
                 <Text style={styles.modalPostBody}>{selectedPostForDetail.text}</Text>
 
                 {selectedPostForDetail.imageUrl ? (
-                  <View style={styles.postMediaContainer}>
-                    <Image
-                      source={{ uri: selectedPostForDetail.imageUrl }}
+                  <View style={[styles.postMediaContainer, selectedPostForDetail.imageAspectRatio ? { width: '100%', height: 'auto', aspectRatio: selectedPostForDetail.imageAspectRatio } : undefined]}>
+                    <PersistedImage
+                      uri={selectedPostForDetail.imageUrl}
                       style={styles.postImage}
                       resizeMode="cover"
                     />

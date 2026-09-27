@@ -32,7 +32,24 @@
     "owner": "3duard033",
     "plugins": [
       "expo-font",
-      "expo-audio"
+      "expo-audio",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita que o DALLAS acesse a galeria para escolher sua foto de perfil.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0A0C",
+          "image": "./assets/images/dallas-icon-trans.png",
+          "imageWidth": 160
+        }
+      ]
     ]
   }
 }

@@ -14,7 +14,7 @@ import { Button, ConfirmationModal, LoadingState } from '../components/common';
 import Screen from '../components/common/Screen';
 import ExercisePickerModal from '../components/common/ExercisePickerModal';
 import { useWorkouts, useExercises, useWorkoutSession, useRestTimer } from '../hooks';
-import { exerciseService, findExerciseByIdOrName, playTimerEndSound } from '../services';
+import { findExerciseByIdOrName, playTimerEndSound } from '../services';
 import { colors, spacing, borderRadius, typography } from '../theme';
 import { Icon } from '../theme/icons';
 import RestTimerOverlay from '../components/workout/RestTimerOverlay';
@@ -35,7 +35,8 @@ export default function ExerciseExecutionScreen() {
   const { workoutId } = route.params;
 
   const { workouts, loading: wLoading, reload: reloadWorkouts } = useWorkouts();
-  const { exercises, reload: reloadExercises } = useExercises();
+  const { exercises, loading: catalogLoading } = useExercises();
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const {
     exercises: execExercises,
@@ -74,11 +75,14 @@ export default function ExerciseExecutionScreen() {
   });
 
   useEffect(() => {
-    if (!workout) return;
+    if (!workout || catalogLoading) return;
     if (initializedWorkoutIdRef.current === workout.id) return;
     initializedWorkoutIdRef.current = workout.id;
-    startSession(workout, exercises);
-  }, [workout, exercises, startSession]);
+    startSession(workout, exercises).catch(error => {
+      initializedWorkoutIdRef.current = null;
+      setSessionError(error instanceof Error ? error.message : 'Não foi possível iniciar o treino.');
+    });
+  }, [workout, exercises, catalogLoading, startSession]);
 
   // Primeiro exercício incompleto para definir como ativo
   const firstIncompleteIndex = useMemo(
@@ -125,14 +129,8 @@ export default function ExerciseExecutionScreen() {
     navigation.goBack();
   };
 
-  const handleAddCustomExercise = async (name: string, muscleGroup: Exercise['muscleGroup']) => {
-    const created = await exerciseService.createCustom(name, muscleGroup);
-    await reloadExercises();
-    await addExerciseToSession(created);
-    return created;
-  };
-
-  if (wLoading) return <Screen><LoadingState /></Screen>;
+  if (sessionError) return <Screen><Text style={{ color: colors.danger }}>{sessionError}</Text><Pressable onPress={() => navigation.goBack()}><Text style={{ color: colors.text }}>Voltar ao treino</Text></Pressable></Screen>;
+  if (wLoading || catalogLoading) return <Screen><LoadingState /></Screen>;
   if (!workout) return <Screen><LoadingState label="Treino não encontrado" /></Screen>;
 
   return (
@@ -301,7 +299,6 @@ export default function ExerciseExecutionScreen() {
         onClose={() => setPickerVisible(false)}
         onAdd={(ex) => addExerciseToSession(ex)}
         selectedIds={execExercises.map((e) => e.exerciseId)}
-        onCreateCustom={handleAddCustomExercise}
       />
 
       {/* Modal Finalizar Treino */}

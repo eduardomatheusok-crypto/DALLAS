@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { Card, Button, LoadingState, Screen, ScreenHeader } from '../components/common';
 import ExercisePickerModal from '../components/common/ExercisePickerModal';
 import { useExercises, useWorkouts } from '../hooks';
-import { workoutService, exerciseService } from '../services';
+import { workoutService } from '../services';
 import { colors, spacing, borderRadius, typography } from '../theme';
 import { Icon } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
@@ -36,7 +36,7 @@ export default function WorkoutFormScreen() {
   const workoutId = route.params?.workoutId;
 
   const { workouts, loading } = useWorkouts();
-  const { exercises, reload: reloadExercises } = useExercises();
+  const { exercises } = useExercises();
 
   const [name, setName] = useState('');
   const [drafts, setDrafts] = useState<DraftExercise[]>([]);
@@ -120,9 +120,11 @@ export default function WorkoutFormScreen() {
       workingSets: d.workingSets,
       advancedTechnique: d.advancedTechnique,
     }));
-    await workoutService.saveWorkout(name, plans, workoutId);
-    setSaving(false);
-    navigation.goBack();
+    try {
+      await workoutService.saveWorkout(name, plans, workoutId);
+      navigation.goBack();
+    } catch (error) { Alert.alert('Não foi possível salvar', error instanceof Error ? error.message : 'Tente novamente.'); }
+    finally { setSaving(false); }
   };
 
   if (loading) return <Screen><LoadingState /></Screen>;
@@ -219,11 +221,7 @@ export default function WorkoutFormScreen() {
         onClose={() => setPickerVisible(false)}
         onAdd={addExercise}
         selectedIds={drafts.map((d) => d.exerciseId)}
-        onCreateCustom={async (name, group) => {
-          const created = await exerciseService.createCustom(name, group);
-          await reloadExercises();
-          return created;
-        }}
+
       />
     </Screen>
   );

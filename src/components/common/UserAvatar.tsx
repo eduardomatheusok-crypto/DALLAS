@@ -1,4 +1,5 @@
 import React from 'react';
+import PersistedImage from './PersistedImage';
 import {
   Image,
   ImageSourcePropType,
@@ -69,11 +70,11 @@ export default function UserAvatar({
     );
   }
 
-  if (avatarUrl && (avatarUrl.startsWith('http') || avatarUrl.startsWith('data:'))) {
+  if (avatarUrl) {
     return (
       <View style={containerStyle}>
-        <Image
-          source={{ uri: avatarUrl }}
+        <PersistedImage
+          uri={avatarUrl}
           style={{ width: size, height: size, borderRadius }}
           resizeMode="cover"
         />

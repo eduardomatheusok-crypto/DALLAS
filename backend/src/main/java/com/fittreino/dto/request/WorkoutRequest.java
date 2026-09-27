@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 import java.util.Map;
 public record WorkoutRequest(
+        String id,
         @NotBlank String name,
         @NotEmpty @Valid List<WorkoutExercisePlanDtoIn> exercises
 ) {

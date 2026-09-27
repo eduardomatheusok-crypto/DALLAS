@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, borderRadius } from '../../theme';
 import { Icon } from '../../theme/icons';
-import { UserAvatar, PRESET_AVATARS } from '../../components/common';
+import AvatarPicker from '../../components/common/AvatarPicker';
 import {
   userService,
   trainingPreferencesService,
@@ -29,14 +29,11 @@ import {
   TRAINING_EXPERIENCES,
   EXACT_FREQUENCIES,
   WEEK_DAYS,
-  TRAINING_LOCATIONS,
-  TRAINING_PREFERENCES,
   TRAINING_SPLITS,
   type TrainingGoal,
   type TrainingExperience,
   type ExactFrequency,
   type WeekDay,
-  type TrainingLocation,
   type TrainingPreference,
   type UserTrainingPreferences,
 } from '../../models/UserTrainingPreferences';
@@ -66,15 +63,16 @@ export default function OnboardingScreen({ onExit }: Props) {
   const [experience, setExperience] = useState<TrainingExperience | null>('intermediate');
   const [exactFrequency, setExactFrequency] = useState<ExactFrequency>(4);
   const [trainingDays, setTrainingDays] = useState<WeekDay[]>(['monday', 'tuesday', 'thursday', 'friday']);
-  const [location, setLocation] = useState<TrainingLocation | null>('gym');
-  const [preference, setPreference] = useState<TrainingPreference | null>('auto');
+  const [plannedSets, setPlannedSets] = useState('3');
+  const [plannedReps, setPlannedReps] = useState('10');
+  const accountRef = useRef(auth.user);
+  const [preference, setPreference] = useState<TrainingPreference | null>('UPPER_LOWER_4X');
 
   // Account State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>('asset:dallas_base');
-  const [customAvatarInput, setCustomAvatarInput] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -117,6 +115,10 @@ export default function OnboardingScreen({ onExit }: Props) {
       return;
     }
 
+    if (step === 4 && (!/^\d+$/.test(plannedSets) || !/^\d+$/.test(plannedReps) || +plannedSets < 1 || +plannedSets > 10 || +plannedReps < 1 || +plannedReps > 100)) {
+      setError('Informe de 1 a 10 séries e de 1 a 100 repetições.');
+      return;
+    }
     if (step < 5) {
       setStep((s) => s + 1);
     } else {
@@ -139,7 +141,7 @@ export default function OnboardingScreen({ onExit }: Props) {
   };
 
   const handleCreateAccountAndPlan = async () => {
-    if (!username.trim() || password.length < 4) {
+    if (!accountRef.current && (!username.trim() || password.length < 4)) {
       setError('Informe um nome de usuário e uma senha de no mínimo 4 caracteres.');
       return;
     }
@@ -148,7 +150,9 @@ export default function OnboardingScreen({ onExit }: Props) {
 
     try {
       // 1. Cria a conta no backend/storage
-      const user = await userService.register(username.trim(), password, avatarUrl || undefined);
+      const user = accountRef.current ?? await userService.register(username.trim(), password);
+      accountRef.current = user;
+      if (avatarUrl) await userService.updateProfile({ avatarUrl });
 
       // 2. Transiciona para a animação "Preparando seu DALLAS"
       setPhase('preparing');
@@ -160,32 +164,25 @@ export default function OnboardingScreen({ onExit }: Props) {
         experience: experience || 'intermediate',
         exactFrequency,
         trainingDays,
-        location: location || 'gym',
+        plannedSets: Number(plannedSets),
+        plannedReps: Number(plannedReps),
         preference: preference || 'auto',
         assignedTemplateId: preference && preference !== 'auto' ? preference : undefined,
         onboardingCompleted: false,
         updatedAt: new Date().toISOString(),
       };
 
-      const plan = workoutPlanGeneratorService.generatePlan(prefs);
+      await trainingPreferencesService.save(prefs);
+      setPrepStep1(true);
+      const plan = await workoutPlanGeneratorService.generatePlan(prefs);
       prefs.assignedTemplateId = plan.templateId;
       setGeneratedPlan(plan);
-
-      // Sequência animada dos checks
-      setTimeout(() => setPrepStep1(true), 600);
-      setTimeout(() => setPrepStep2(true), 1300);
-      setTimeout(async () => {
-        setPrepStep3(true);
-        // Salva os treinos gerados e as preferências
-        await workoutPlanGeneratorService.savePlanWorkouts(plan.workouts);
-        prefs.onboardingCompleted = true;
-        await trainingPreferencesService.save(prefs);
-
-        // Transiciona para a tela de pronto
-        setTimeout(() => {
-          setPhase('ready');
-        }, 800);
-      }, 2000);
+      setPrepStep2(true);
+      await workoutPlanGeneratorService.savePlanWorkouts(plan.workouts);
+      prefs.onboardingCompleted = true;
+      await trainingPreferencesService.save(prefs);
+      setPrepStep3(true);
+      setPhase('ready');
     } catch (e) {
       setPhase('account');
       setError(e instanceof Error ? e.message : 'Erro ao criar conta.');
@@ -206,17 +203,17 @@ export default function OnboardingScreen({ onExit }: Props) {
       'Qual seu nível de experiência?',
       'Quantos dias você quer treinar?',
       'Escolha seus dias de treino',
-      'Onde você vai treinar?',
+      'Quantas séries e repetições?',
       'Como prefere organizar seu treino?',
     ];
 
     const subtitles = [
-      'Seu foco guiará as faixas de repetições e volume.',
+      'Conte ao DALLAS o que você quer alcançar.',
       'Adaptaremos a intensidade e recuperação.',
       'Defina sua rotina semanal de musculação.',
       `Selecione ${exactFrequency} dias. Os demais serão descanso.`,
-      'Configuraremos os exercícios com base no seu espaço.',
-      'Sua escolha determinística ideal de divisão.',
+      'Esta configuração será aplicada a todos os exercícios dos treinos gerados.',
+      'Escolha uma divisão ou monte seus próprios treinos.',
     ];
 
     return (
@@ -386,41 +383,35 @@ export default function OnboardingScreen({ onExit }: Props) {
             </View>
           )}
 
-          {/* PERGUNTA 5: LOCAL */}
           {step === 4 && (
             <View style={styles.cardsList}>
-              {TRAINING_LOCATIONS.map((opt) => {
-                const selected = location === opt.value;
-                return (
-                  <Pressable
-                    key={opt.value}
-                    style={[styles.selectCard, selected && styles.selectCardActive]}
-                    onPress={() => setLocation(opt.value)}
-                  >
-                    <Text style={[styles.cardTitle, selected && styles.cardTitleActive]}>
-                      {opt.label}
-                    </Text>
-                    <View style={[styles.radioCircle, selected && styles.radioCircleActive]}>
-                      {selected ? <View style={styles.radioDot} /> : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
+              <Text style={styles.fieldLabel}>SÉRIES</Text>
+              <TextInput accessibilityLabel="Séries" style={styles.input} keyboardType="number-pad" value={plannedSets} onChangeText={setPlannedSets} maxLength={2} />
+              <Text style={styles.fieldLabel}>REPETIÇÕES</Text>
+              <TextInput accessibilityLabel="Repetições" style={styles.input} keyboardType="number-pad" value={plannedReps} onChangeText={setPlannedReps} maxLength={3} />
             </View>
           )}
 
           {/* PERGUNTA 6: ORGANIZAÇÃO DA DIVISÃO (FILTRADA POR FREQUÊNCIA) */}
           {step === 5 && (
             <View style={styles.cardsList}>
-              {TRAINING_SPLITS.filter(
-                (s) => s.id === 'auto' || s.frequencies.includes(exactFrequency),
-              ).map((split) => {
+              {TRAINING_SPLITS.map((split) => {
                 const selected = (preference || 'auto') === split.id;
                 return (
                   <Pressable
                     key={split.id}
                     style={[styles.selectCard, selected && styles.selectCardActive]}
-                    onPress={() => setPreference(split.id)}
+                    onPress={() => {
+                      setPreference(split.id);
+                      if (split.id !== 'manual') {
+                        const count = split.frequencies[0];
+                        setExactFrequency(count);
+                        setTrainingDays(previous => {
+                          const ordered = [...previous, ...WEEK_DAYS.map(d => d.value).filter(d => !previous.includes(d))];
+                          return ordered.slice(0, count);
+                        });
+                      }
+                    }}
                   >
                     <View style={styles.cardTextWrap}>
                       <View style={styles.prefTitleRow}>
@@ -500,89 +491,7 @@ export default function OnboardingScreen({ onExit }: Props) {
           ) : null}
 
           <View style={styles.formSection}>
-            {/* Foto de Perfil */}
-            <View style={styles.avatarPickerSection}>
-              <Text style={styles.fieldLabel}>FOTO DE PERFIL</Text>
-              <View style={styles.avatarMainRow}>
-                <View style={styles.avatarPreviewWrap}>
-                  <UserAvatar
-                    avatarUrl={avatarUrl}
-                    name={username || 'D'}
-                    size={72}
-                    showBorder
-                    borderColor="#FF1E27"
-                  />
-                  <View style={styles.avatarBadge}>
-                    <Icon name="check" size="xs" color="#FFFFFF" />
-                  </View>
-                </View>
-
-                <View style={styles.avatarRightCol}>
-                  <Text style={styles.avatarHint}>
-                    Escolha um avatar oficial ou use seu link:
-                  </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.avatarPresetsScroll}
-                  >
-                    {PRESET_AVATARS.map((preset) => {
-                      const isSelected = avatarUrl === preset.uri;
-                      return (
-                        <Pressable
-                          key={preset.id}
-                          style={[
-                            styles.avatarPresetItem,
-                            isSelected && styles.avatarPresetItemSelected,
-                          ]}
-                          onPress={() => {
-                            Haptics.selectionAsync().catch(() => {});
-                            setAvatarUrl(preset.uri);
-                            setShowCustomInput(false);
-                          }}
-                        >
-                          <UserAvatar
-                            avatarUrl={preset.uri}
-                            size={40}
-                            showBorder={isSelected}
-                            borderColor="#FF1E27"
-                          />
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-
-                  <Pressable
-                    style={styles.customLinkToggle}
-                    onPress={() => setShowCustomInput((v) => !v)}
-                  >
-                    <Icon name="link" size="xs" color="#8E8E93" />
-                    <Text style={styles.customLinkToggleText}>
-                      {showCustomInput ? 'Fechar link' : 'Usar link de foto web'}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {showCustomInput ? (
-                <View style={styles.customUrlInputWrap}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="https://exemplo.com/sua-foto.jpg"
-                    placeholderTextColor="#636366"
-                    value={customAvatarInput}
-                    onChangeText={(t) => {
-                      setCustomAvatarInput(t);
-                      if (t.trim().startsWith('http')) {
-                        setAvatarUrl(t.trim());
-                      }
-                    }}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              ) : null}
-            </View>
+            <AvatarPicker value={avatarUrl} name={username} onChange={setAvatarUrl} />
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>NOME DE USUÁRIO</Text>
@@ -698,7 +607,7 @@ export default function OnboardingScreen({ onExit }: Props) {
 
         {/* Schedule Grid */}
         <View style={styles.readyScheduleBox}>
-          <Text style={styles.scheduleTitle}>SUA GRADE SEMANAL</Text>
+          <Text style={styles.scheduleTitle}>{generatedPlan?.templateId === 'manual' ? 'Crie seu primeiro treino na aba Treinos.' : 'SUA GRADE SEMANAL'}</Text>
           <View style={styles.scheduleGrid}>
             {generatedPlan?.schedule.map((item) => (
               <View key={item.day} style={styles.scheduleItem}>

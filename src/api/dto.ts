@@ -3,7 +3,7 @@ import { SET_TYPES } from '../models';
 
 // ----- API DTOs (espelham o backend Spring Boot) -----
 
-export interface ExerciseDto {
+export interface ExerciseDto extends Pick<Exercise, 'sourceId' | 'equipment' | 'secondaryMuscles' | 'startImage' | 'endImage' | 'gifUrl' | 'steps' | 'instructions' | 'dallasTip'> {
   id: string;
   name: string;
   muscleGroup: string;
@@ -102,7 +102,8 @@ export function exerciseToDto(e: Exercise): ExerciseDto {
 }
 
 export function exerciseFromDto(d: ExerciseDto): Exercise {
-  return { id: d.id, name: d.name, muscleGroup: d.muscleGroup as Exercise['muscleGroup'], isCustom: d.custom, createdAt: d.createdAt };
+  const { custom, ...fields } = d;
+  return { ...fields, muscleGroup: d.muscleGroup as Exercise['muscleGroup'], isCustom: custom, catalogOrigin: 'api' };
 }
 
 export function workoutToDto(w: Workout): WorkoutDto {

@@ -1,3 +1,4 @@
+import type { WorkoutSummary } from '../models/WorkoutSummary';
 export type RootStackParamList = {
   MainTabs: { screen?: keyof MainTabParamList } | undefined;
   WorkoutDetail: { workoutId: string };
@@ -5,7 +6,7 @@ export type RootStackParamList = {
   WorkoutExerciseConfig: { workoutId: string; exerciseId: string };
   ExerciseExecution: { workoutId: string };
   ActiveExerciseDetail: { workoutId: string; exerciseId: string; exerciseIndex?: number };
-  WorkoutComplete: { durationSeconds: number; volume: number; series: number };
+  WorkoutComplete: WorkoutSummary;
   Settings: undefined;
   LogDetail: { logId: string };
   ExerciseProgress: { exerciseId: string; name: string };

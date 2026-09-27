@@ -13,8 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { ConfirmationModal, LoadingState } from '../components/common';
 import Screen from '../components/common/Screen';
 import { useWorkoutSession, useExercises, useRestTimer, useWorkouts } from '../hooks';
-import { findExerciseByIdOrName, playTimerEndSound, resolveCanonicalName } from '../services';
-import { CURATED_EXERCISES } from '../data/curatedExercises';
+import { findExerciseByIdOrName, playTimerEndSound } from '../services';
 import { colors, spacing, borderRadius } from '../theme';
 import { Icon } from '../theme/icons';
 import RestTimerOverlay from '../components/workout/RestTimerOverlay';
@@ -48,7 +47,7 @@ export default function ActiveExerciseDetailScreen() {
     finishSession,
   } = useWorkoutSession();
 
-  const { exercises: catalogExercises } = useExercises();
+  const { exercises: catalogExercises, loading: catalogLoading } = useExercises();
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [finishModalVisible, setFinishModalVisible] = useState(false);
 
@@ -71,31 +70,7 @@ export default function ActiveExerciseDetailScreen() {
 
   const catalogExercise = useMemo<Exercise | null>(() => {
     if (!currentExec) return null;
-    const found = findExerciseByIdOrName(catalogExercises, currentExec.exerciseId, currentExec.exerciseName);
-    if (found) return found;
-    const c = CURATED_EXERCISES.find(
-      (item) =>
-        item.name.toLowerCase() === currentExec.exerciseName.toLowerCase() ||
-        resolveCanonicalName(item.name).toLowerCase() === resolveCanonicalName(currentExec.exerciseName).toLowerCase() ||
-        resolveCanonicalName(item.name).toLowerCase() === resolveCanonicalName(currentExec.exerciseId).toLowerCase(),
-    );
-    if (c) {
-      return {
-        id: currentExec.exerciseId,
-        name: c.name,
-        muscleGroup: c.muscleGroup,
-        equipment: c.equipment,
-        secondaryMuscles: c.secondaryMuscles,
-        startImage: c.startImage,
-        endImage: c.endImage,
-        steps: c.steps,
-        instructions: c.instructions,
-        dallasTip: c.dallasTip,
-        isCustom: false,
-        createdAt: new Date().toISOString(),
-      };
-    }
-    return null;
+    return catalogExercises.find(exercise => exercise.id === currentExec.exerciseId) ?? null;
   }, [catalogExercises, currentExec]);
 
   const nextCatalogExercise = useMemo<Exercise | null>(() => {
@@ -157,6 +132,7 @@ export default function ActiveExerciseDetailScreen() {
     navigation.navigate('WorkoutComplete', payload);
   };
 
+  if (catalogLoading) return <Screen><LoadingState /></Screen>;
   if (!currentExec) {
     return (
       <Screen style={styles.screen}>
@@ -181,6 +157,7 @@ export default function ActiveExerciseDetailScreen() {
         <View style={styles.headerTop}>
           <Pressable
             style={styles.backButton}
+            accessibilityLabel="Voltar ao treino"
             onPress={() => navigation.goBack()}
             hitSlop={12}
           >
@@ -273,6 +250,7 @@ export default function ActiveExerciseDetailScreen() {
             <View style={styles.mediaContainer}>
               <ExerciseMediaViewer
                 startImage={catalogExercise.startImage}
+                gifUrl={catalogExercise.gifUrl}
                 endImage={catalogExercise.endImage}
                 autoAnimate
               />
@@ -344,6 +322,9 @@ export default function ActiveExerciseDetailScreen() {
                   {/* Checkbox Button */}
                   <Pressable
                     style={[styles.checkSquare, s.completed && styles.checkSquareCompleted]}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`Série ${s.setNumber} concluída`}
+                    accessibilityState={{ checked: s.completed }}
                     onPress={() => handleToggleSet(s.id)}
                     hitSlop={8}
                   >

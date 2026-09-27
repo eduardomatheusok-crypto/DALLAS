@@ -23,6 +23,8 @@ export interface WorkoutExercisePlan {
 }
 
 export interface Workout {
+  pendingSync?: boolean;
+  ownerId?: string;
   id: string;
   name: string;
   exercises: WorkoutExercisePlan[];

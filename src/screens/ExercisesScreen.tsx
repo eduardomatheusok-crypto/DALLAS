@@ -1,3 +1,4 @@
+import { isCatalogExercise } from '../services/ExerciseService';
 import React, { useState, useMemo } from 'react';
 import {
   FlatList,
@@ -33,15 +34,13 @@ export default function ExercisesScreen() {
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<MuscleGroup | undefined>(undefined);
   const [equipment, setEquipment] = useState<ExerciseEquipment | undefined>(undefined);
-  const [createVisible, setCreateVisible] = useState(false);
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
 
   const { exercises, loading, reload } = useExercises(query, group);
 
   // Filtra por equipamento em memória sobre o resultado já filtrado por grupo/busca
   const filteredExercises = useMemo(() => {
-    if (!equipment) return exercises;
-    return exercises.filter((e) => e.equipment === equipment);
+    return exercises.filter(e => isCatalogExercise(e) && (!equipment || e.equipment === equipment));
   }, [exercises, equipment]);
 
   const groups: { group: MuscleGroup | 'Todos' }[] = [
@@ -61,16 +60,7 @@ export default function ExercisesScreen() {
           <Text style={typography.overline}>Biblioteca</Text>
           <Text style={[typography.title, styles.title]}>Exercícios</Text>
         </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.newButton,
-            pressed && styles.newButtonPressed,
-          ]}
-          onPress={() => setCreateVisible(true)}
-        >
-          <Icon name="plus" size="sm" color={colors.white} />
-          <Text style={styles.newButtonText}>Novo</Text>
-        </Pressable>
+
       </View>
 
       <View style={styles.searchWrap}>
@@ -151,6 +141,7 @@ export default function ExercisesScreen() {
                   {/* Thumbnail com foto do exercício */}
                   <ExerciseMediaViewer
                     startImage={item.startImage}
+                    gifUrl={item.gifUrl}
                     endImage={item.endImage}
                     mode="thumbnail"
                   />
@@ -196,141 +187,7 @@ export default function ExercisesScreen() {
         onClose={() => setDetailExercise(null)}
       />
 
-      <CreateExerciseModal
-        visible={createVisible}
-        onClose={() => setCreateVisible(false)}
-        onCreated={async () => {
-          await reload();
-          setCreateVisible(false);
-        }}
-      />
     </Screen>
-  );
-}
-
-function CreateExerciseModal({
-  visible,
-  onClose,
-  onCreated,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onCreated: () => Promise<void>;
-}) {
-  const [name, setName] = useState('');
-  const [group, setGroup] = useState<MuscleGroup>('Peito');
-  const [equipment, setEquipment] = useState<ExerciseEquipment>('Halteres');
-  const [tip, setTip] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const submit = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    await exerciseService.createCustom(
-      name.trim(),
-      group,
-      equipment,
-      tip.trim() || undefined
-    );
-    setSaving(false);
-    setName('');
-    setTip('');
-    setGroup('Peito');
-    setEquipment('Halteres');
-    await onCreated();
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text style={typography.subtitle}>Novo exercício</Text>
-            <Pressable onPress={onClose} hitSlop={12} style={styles.closeButton}>
-              <Icon name="close" size="sm" color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Nome do exercício (ex: Supino com pegada fechada)"
-            placeholderTextColor={colors.textMuted}
-            value={name}
-            onChangeText={setName}
-          />
-
-          <TextInput
-            style={[styles.input, styles.tipInput]}
-            placeholder="Dica de postura / execução (opcional)"
-            placeholderTextColor={colors.textMuted}
-            value={tip}
-            onChangeText={setTip}
-            multiline
-          />
-
-          <Text style={styles.groupLabel}>Grupo muscular</Text>
-          <View style={styles.groupWrap}>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={MUSCLE_GROUPS}
-              keyExtractor={(g) => g}
-              renderItem={({ item }) => (
-                <MuscleGroupPill
-                  label={item}
-                  active={group === item}
-                  onPress={() => setGroup(item)}
-                />
-              )}
-            />
-          </View>
-
-          <Text style={styles.groupLabel}>Equipamento</Text>
-          <View style={styles.groupWrap}>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={EXERCISE_EQUIPMENTS}
-              keyExtractor={(eq) => eq}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => setEquipment(item)}
-                  style={[
-                    styles.equipPill,
-                    equipment === item && styles.equipPillActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.equipPillText,
-                      equipment === item && styles.equipPillTextActive,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </Pressable>
-              )}
-            />
-          </View>
-
-          <View style={styles.modalActions}>
-            <Button
-              title="Cancelar"
-              variant="secondary"
-              onPress={onClose}
-              style={styles.flexButton}
-            />
-            <Button
-              title="Salvar"
-              onPress={submit}
-              loading={saving}
-              disabled={!name.trim()}
-              style={styles.flexButton}
-            />
-          </View>
-        </View>
-      </View>
-    </Modal>
   );
 }
 

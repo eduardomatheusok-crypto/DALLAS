@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -20,7 +21,8 @@ import {
 } from '../components/common';
 import WorkoutCard from '../components/workout/WorkoutCard';
 import { useWorkouts, useExercises } from '../hooks';
-import { workoutService } from '../services';
+import { workoutService, workoutPlanGeneratorService, trainingPreferencesService } from '../services';
+import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { Icon } from '../theme/icons';
 import type { RootStackParamList } from '../navigation/types';
@@ -39,58 +41,11 @@ const MUSCLE_TAGS = [
   'Tríceps',
 ];
 
-// Pre-defined workout templates for the "Modelos" tab
-const WORKOUT_TEMPLATES: Workout[] = [
-  {
-    id: 'template-upper-a',
-    name: 'UPPER A',
-    exercises: [
-      { exerciseId: 'supino-reto', order: 1, plannedSets: 4, plannedReps: 10 },
-      { exerciseId: 'remada-curvada', order: 2, plannedSets: 4, plannedReps: 10 },
-      { exerciseId: 'desenvolvimento-halteres', order: 3, plannedSets: 3, plannedReps: 12 },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'template-lower-a',
-    name: 'LOWER A',
-    exercises: [
-      { exerciseId: 'agachamento-livre', order: 1, plannedSets: 4, plannedReps: 8 },
-      { exerciseId: 'leg-press', order: 2, plannedSets: 4, plannedReps: 10 },
-      { exerciseId: 'cadeira-extensora', order: 3, plannedSets: 3, plannedReps: 12 },
-      { exerciseId: 'stiff', order: 4, plannedSets: 3, plannedReps: 10 },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'template-upper-b',
-    name: 'UPPER B',
-    exercises: [
-      { exerciseId: 'supino-inclinado', order: 1, plannedSets: 4, plannedReps: 10 },
-      { exerciseId: 'puxada-alta', order: 2, plannedSets: 4, plannedReps: 10 },
-      { exerciseId: 'elevacao-lateral', order: 3, plannedSets: 4, plannedReps: 12 },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'template-lower-b',
-    name: 'LOWER B',
-    exercises: [
-      { exerciseId: 'levantamento-terra', order: 1, plannedSets: 4, plannedReps: 6 },
-      { exerciseId: 'mesa-flexora', order: 2, plannedSets: 4, plannedReps: 10 },
-      { exerciseId: 'panturrilha-pe', order: 3, plannedSets: 4, plannedReps: 15 },
-      { exerciseId: 'elevacao-pelvica', order: 4, plannedSets: 3, plannedReps: 12 },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
 export default function WorkoutsScreen() {
   const navigation = useNavigation<Nav>();
+  const { user } = useAuth();
+  const [templates, setTemplates] = useState<Workout[]>([]);
+  const [templateError, setTemplateError] = useState('');
   const { workouts, loading, reload } = useWorkouts();
   const { exercises, reload: reloadExercises } = useExercises();
 
@@ -99,6 +54,23 @@ export default function WorkoutsScreen() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<string | null>(null);
   const [renameFor, setRenameFor] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (activeTab !== 'templates' || !user) return;
+    let active = true;
+    setTemplateError('');
+    (async () => {
+      const prefs = await trainingPreferencesService.getFor(user.id);
+      const plan = await workoutPlanGeneratorService.generatePlan({
+        userId: user.id, goal: prefs?.goal ?? 'gain-mass', trainingDays: prefs?.trainingDays ?? [],
+        plannedSets: prefs?.plannedSets ?? 3, plannedReps: prefs?.plannedReps ?? 10,
+        preference: 'UPPER_LOWER_4X', assignedTemplateId: 'UPPER_LOWER_4X', updatedAt: new Date().toISOString(),
+      });
+      if (active) setTemplates(plan.workouts);
+    })().catch(error => { if (active) setTemplateError(error instanceof Error ? error.message : 'Não foi possível carregar os modelos.'); });
+    return () => { active = false; };
+  }, [activeTab, user?.id]);
+
 
   useFocusEffect(
     React.useCallback(() => {
@@ -122,9 +94,11 @@ export default function WorkoutsScreen() {
   };
 
   const importTemplate = async (template: Workout) => {
-    await workoutService.saveWorkout(template.name, template.exercises);
-    await reload();
-    setActiveTab('my');
+    try {
+      await workoutService.saveWorkout(template.name, template.exercises);
+      await reload();
+      setActiveTab('my');
+    } catch (error) { Alert.alert('Não foi possível importar', error instanceof Error ? error.message : 'Tente novamente.'); }
   };
 
   const openRename = () => {
@@ -134,7 +108,7 @@ export default function WorkoutsScreen() {
   };
 
   const displayedWorkouts = useMemo(() => {
-    const list = activeTab === 'my' ? workouts : WORKOUT_TEMPLATES;
+    const list = activeTab === 'my' ? workouts : templates;
     if (selectedMuscle === 'Todos') return list;
 
     return list.filter((w) => {
@@ -145,10 +119,11 @@ export default function WorkoutsScreen() {
         return ex?.muscleGroup?.toLowerCase() === selectedMuscle.toLowerCase();
       });
     });
-  }, [activeTab, workouts, selectedMuscle, exercises]);
+  }, [activeTab, workouts, templates, selectedMuscle, exercises]);
 
   return (
     <Screen scroll={false} style={styles.screen}>
+      {activeTab === 'templates' && !!templateError && <Text style={{ color: colors.danger }}>{templateError}</Text>}
       {/* Top Header */}
       <View style={styles.header}>
         <View>

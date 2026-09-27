@@ -1,7 +1,7 @@
+import type { WorkoutSummary } from '../models/WorkoutSummary';
 import { workoutLogService, buildLog } from './WorkoutLogService';
 import { workoutService } from './WorkoutService';
 import { findExerciseByIdOrName } from './ExerciseService';
-import { CURATED_EXERCISES } from '../data/curatedExercises';
 import type {
   Exercise,
   Workout,
@@ -185,6 +185,9 @@ class WorkoutSessionService {
       return;
     }
 
+    if (workout.exercises.some(plan => !exercisesCatalog.some(exercise => exercise.id === plan.exerciseId))) {
+      throw new Error('Este treino contém uma referência antiga indisponível. Edite o treino e selecione o exercício no catálogo.');
+    }
     this.workoutId = workout.id;
     this.workout = workout;
     this.startedAt = new Date().toISOString();
@@ -193,8 +196,7 @@ class WorkoutSessionService {
     const ordered = [...workout.exercises].sort((a, b) => a.order - b.order);
     this.exercises = ordered.map((we) => {
       const ex =
-        findExerciseByIdOrName(exercisesCatalog, we.exerciseId) ||
-        CURATED_EXERCISES.find((c) => c.name.toLowerCase() === we.exerciseId.toLowerCase());
+        findExerciseByIdOrName(exercisesCatalog, we.exerciseId)!;
       const initialWeight = we.initialWeight ?? 0;
       const segments = buildSetSegments(we);
       const sets = segments.map((seg, i) => ({
@@ -211,8 +213,8 @@ class WorkoutSessionService {
 
       return {
         exerciseId: we.exerciseId,
-        exerciseName: ex?.name ?? 'Exercício',
-        muscleGroup: ex?.muscleGroup ?? '',
+        exerciseName: ex.name,
+        muscleGroup: ex.muscleGroup,
         plannedSets: planWorkingSets(we),
         plannedReps: we.plannedReps,
         warmupSets: planWarmupSets(we),
@@ -507,7 +509,7 @@ class WorkoutSessionService {
     this.notify();
   }
 
-  public async finishSession(): Promise<{ durationSeconds: number; volume: number; series: number }> {
+  public async finishSession(): Promise<WorkoutSummary> {
     const finishedAt = new Date().toISOString();
     const logExercises: WorkoutLogExercise[] = this.exercises.map((e) => ({
       exerciseId: e.exerciseId,
@@ -529,16 +531,18 @@ class WorkoutSessionService {
       exercises: logExercises,
     });
 
-    await workoutLogService.saveLog(log);
+    const savedLog = await workoutLogService.saveLog(log);
     await workoutLogService.invalidate();
     await workoutService.invalidate();
 
     const workingSetsDone = this.exercises.reduce(
-      (acc, e) => acc + e.sets.filter((s) => s.completed && isWorkingSet(s)).length,
+      (acc, e) => acc + e.sets.filter((s) => s.completed).length,
       0,
     );
 
     const payload = {
+      logId: savedLog.id,
+      workoutName: savedLog.workoutName,
       durationSeconds: log.durationSeconds,
       volume: log.totalVolume,
       series: workingSetsDone,

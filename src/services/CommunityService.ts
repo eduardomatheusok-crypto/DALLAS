@@ -233,6 +233,7 @@ export class CommunityService {
     imageUrl?: string,
     workoutTag?: string,
     author?: { name?: string; handle?: string; avatarUrl?: string },
+    imageAspectRatio?: number,
   ): Promise<CommunityPost> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     const posts: CommunityPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
@@ -244,6 +245,7 @@ export class CommunityService {
       userAvatar: author?.avatarUrl,
       text: text.trim(),
       imageUrl,
+      imageAspectRatio,
       workoutTag,
       likes: 0,
       commentsCount: 0,

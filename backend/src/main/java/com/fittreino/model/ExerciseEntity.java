@@ -28,6 +28,12 @@ public class ExerciseEntity {
     @Column(nullable = false)
     private Instant createdAt;
 
+    @Column(length = 30000)
+    private String catalogData;
+
+    public String getCatalogData() { return catalogData; }
+    public void setCatalogData(String catalogData) { this.catalogData = catalogData; }
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
